@@ -1,0 +1,27 @@
+# Credenciais / segredos — NUNCA versionar
+.env
+.env.*
+!.env.example
+*.key
+secrets.json
+
+# Persistência de desenvolvimento (fica fora do repo, mas por segurança)
+.devdata/
+devdata/
+
+# SO / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# Build / temporários
+*.log
+dist/
+build/
+*.zip

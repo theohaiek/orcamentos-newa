@@ -1,0 +1,26 @@
+{
+  "_comment": "Registro de seguradoras. 'color' = cor primária da marca (usada no header da coluna). 'text' = cor do texto sobre a cor primária. 'detect' = termos que, se aparecerem no texto do PDF, identificam a seguradora. Tudo editável pela seção 'Modelos de Entrada' da UI.",
+  "insurers": [
+    { "id": "allianz",   "name": "Allianz",        "color": "#003781", "color2": "#0F62FE", "text": "light", "abbr": "AZ",  "detect": ["allianz"] },
+    { "id": "porto",     "name": "Porto Seguro",   "color": "#0A2C7C", "color2": "#F2B705", "text": "light", "abbr": "PS",  "detect": ["porto seguro", "porto s"] },
+    { "id": "azul",      "name": "Azul Seguros",   "color": "#0090D7", "color2": "#F58220", "text": "light", "abbr": "AZ",  "detect": ["azul seguros", "azul cia"] },
+    { "id": "itau",      "name": "Itaú",           "color": "#EC7000", "color2": "#003399", "text": "light", "abbr": "IT",  "detect": ["itau", "itaú"] },
+    { "id": "bradesco",  "name": "Bradesco",       "color": "#CC092F", "color2": "#E4003A", "text": "light", "abbr": "BR",  "detect": ["bradesco"] },
+    { "id": "mapfre",    "name": "Mapfre",         "color": "#D81E05", "color2": "#B31217", "text": "light", "abbr": "MP",  "detect": ["mapfre"] },
+    { "id": "zurich",    "name": "Zurich",         "color": "#003DA5", "color2": "#2E6BE6", "text": "light", "abbr": "ZU",  "detect": ["zurich"] },
+    { "id": "hdi",       "name": "HDI Seguros",    "color": "#009640", "color2": "#00733A", "text": "light", "abbr": "HDI", "detect": ["hdi"] },
+    { "id": "suhai",     "name": "Suhai",          "color": "#E4002B", "color2": "#1A1A1A", "text": "light", "abbr": "SU",  "detect": ["suhai"] },
+    { "id": "tokio",     "name": "Tokio Marine",   "color": "#E60012", "color2": "#003366", "text": "light", "abbr": "TK",  "detect": ["tokio", "tóquio", "tokyo"] },
+    { "id": "mitsui",    "name": "Mitsui Sumitomo","color": "#002D62", "color2": "#C8102E", "text": "light", "abbr": "MS",  "detect": ["mitsui"] },
+    { "id": "yelum",     "name": "Yelum",          "color": "#00857C", "color2": "#00B3A4", "text": "light", "abbr": "YL",  "detect": ["yelum", "liberty", "indiana"] },
+    { "id": "aliro",     "name": "Aliro",          "color": "#0E8A8A", "color2": "#16B3B3", "text": "light", "abbr": "AL",  "detect": ["aliro"] },
+    { "id": "darwin",    "name": "Darwin",         "color": "#0E4C92", "color2": "#2E6BE6", "text": "light", "abbr": "DW",  "detect": ["darwin"] },
+    { "id": "justos",    "name": "Justos",         "color": "#141414", "color2": "#C6FF3D", "text": "light", "abbr": "JU",  "detect": ["justos"] },
+    { "id": "ezze",      "name": "EZZE Seguros",   "color": "#E2001A", "color2": "#1A1A1A", "text": "light", "abbr": "EZ",  "detect": ["ezze"] },
+    { "id": "sura",      "name": "Sura",           "color": "#0033A1", "color2": "#2E6BE6", "text": "light", "abbr": "SR",  "detect": ["sura", "seguros sura"] },
+    { "id": "sulamerica","name": "SulAmérica",     "color": "#F58220", "color2": "#E4003A", "text": "light", "abbr": "SA",  "detect": ["sulamerica", "sulamérica", "sul américa"] },
+    { "id": "essor",     "name": "Essor",          "color": "#6E2B62", "color2": "#9C3D8C", "text": "light", "abbr": "ES",  "detect": ["essor"] },
+    { "id": "pottencial","name": "Pottencial",     "color": "#E30613", "color2": "#1A1A1A", "text": "light", "abbr": "PT",  "detect": ["pottencial", "potencial"] },
+    { "id": "generico",  "name": "Seguradora",     "color": "#12703A", "color2": "#1F9E4A", "text": "light", "abbr": "SG",  "detect": [] }
+  ]
+}
