@@ -58,6 +58,19 @@
 .compare .head .tt small { font-size: 11px; letter-spacing: .2em; color: var(--ink-2); text-transform: uppercase; }
 .compare .head .tt h1 { font-size: 34px; font-weight: 800; color: #1b1b1b; margin-top: 4px; }
 
+/* banner das seguradoras comparadas (topo do comparativo) */
+.cmp-banner { margin: 4px 44px 14px; padding: 14px 18px; background: var(--green-50); border-radius: var(--r-md); box-shadow: inset 0 0 0 1px var(--green-100);
+  display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.cmp-lbl { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--green-700); flex: none; }
+.cmp-insurers { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+.cmp-ins { display: flex; align-items: center; gap: 9px; }
+.cmp-badge { width: 22px; height: 22px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 800; flex: none; }
+.cmp-logo { height: 30px; background: #fff; border-radius: 8px; padding: 4px 10px; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(16,40,28,.08), inset 0 0 0 1px var(--line); }
+.cmp-logo img { height: 100%; width: auto; max-width: 120px; object-fit: contain; display: block; }
+.cmp-dot { width: 30px; height: 30px; border-radius: 8px; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 800; flex: none; }
+.cmp-nm { font-size: 15px; font-weight: 700; color: #1b1b1b; }
+.cmp-x { font-size: 18px; font-weight: 400; color: var(--ink-3); }
+
 /* barra de seção */
 .sec-bar { background: linear-gradient(90deg, var(--green-800), var(--green-700)); color: #fff;
   padding: 11px 44px; display: grid; align-items: center; gap: 10px; }

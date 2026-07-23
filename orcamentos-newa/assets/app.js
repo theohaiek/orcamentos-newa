@@ -27,6 +27,8 @@
     dl: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M19 12H5m0 0 7 7m-7-7 7-7"/></svg>',
     fwd: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12h14m0 0-7-7m7 7-7 7"/></svg>',
+    wand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m15 4 1.5 3L20 8.5 16.5 10 15 13l-1.5-3L10 8.5 13.5 7 15 4Z"/><path d="M4 20 14 10"/><path d="M6.5 6.5 5 5m0 3.5L3.5 7"/></svg>',
+    zoom: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg>',
     phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z"/></svg>',
     mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 6 10 7 10-7"/></svg>',
     pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
@@ -589,9 +591,22 @@
       ? '<div class="obs"><div class="obs-t">' + esc(T.obs.title || "Observações") + "</div><ul" + (editable && !ph ? ' contenteditable="true" data-obs="1"' : "") + ">" +
         obsItems.map((o) => "<li>" + mark(o) + "</li>").join("") + "</ul></div>"
       : "";
+    // banner: quais seguradoras a proposta compara (logo + nome)
+    const cmpIns = cols.map((col, i) => {
+      const ins = insurerById(col.insurer_id);
+      const logo = ins.logo_small || ins.logo;
+      const media = logo
+        ? '<span class="cmp-logo"><img src="' + esc(logo) + '" alt="' + esc(ins.name) + '"></span>'
+        : '<span class="cmp-dot" style="background:' + ins.color + '">' + esc(ins.abbr || "") + "</span>";
+      return '<div class="cmp-ins"><span class="cmp-badge" style="background:' + ins.color + '">' + (i + 1) + "</span>" +
+        media + '<span class="cmp-nm">' + esc(ins.name) + "</span></div>";
+    }).join('<span class="cmp-x">×</span>');
+    const cmpBanner = '<div class="cmp-banner"><div class="cmp-lbl">Comparativo entre seguradoras</div>' +
+      '<div class="cmp-insurers">' + cmpIns + "</div></div>";
     const compare =
       '<div class="doc-page compare" data-page="2"><div class="topgrad"></div>' +
       '<div class="head"><img class="logo-img" src="' + LOGO + '" alt="NEWA"><div class="tt"><small>' + esc(T.subtitle || "") + "</small><h1>" + esc(T.title || "") + "</h1></div></div>" +
+      cmpBanner +
       '<div class="sec-bar"><div class="sec-title">' + esc(T.infoTitle || "") + "</div></div>" +
       infoGrid +
       sectionsHTML +
@@ -831,7 +846,7 @@
       '<button class="btn icon ghost" data-wclose>' + I.x + "</button></div>" +
       '<div class="wiz-steps" id="wiz-steps"></div>' +
       '<div class="wiz-body" id="wiz-body"></div>' +
-      '<div class="wiz-foot"><div class="wiz-foot-l"><button class="btn ghost" id="wiz-fill">Preencher vazios</button>' +
+      '<div class="wiz-foot"><div class="wiz-foot-l"><button class="btn secondary" id="wiz-fill">' + I.wand + " Preencher vazios</button>" +
       '<button class="btn ghost" id="wiz-prev">' + I.back + " Anterior</button></div>" +
       '<div class="wiz-count" id="wiz-count"></div>' +
       '<button class="btn" id="wiz-next">Próximo</button></div></div>';
@@ -885,6 +900,10 @@
     $("#wiz-prev").style.visibility = W.step === 0 ? "hidden" : "visible";
     const last = W.step === steps.length - 1;
     $("#wiz-next").innerHTML = last ? I.dl + " Confirmar e gerar PDF" : "Próximo " + I.fwd;
+    // botão "Preencher vazios" ganha destaque quando há pendências
+    const n = pending();
+    const fill = $("#wiz-fill");
+    if (fill) { fill.classList.toggle("hot", n > 0); fill.innerHTML = I.wand + (n > 0 ? " Preencher " + n + " vazio(s)" : " Preencher vazios"); }
     // body
     $("#wiz-body").innerHTML = wizStepBody(st);
     wireWizStep(st);
@@ -895,7 +914,7 @@
     const center = wizCenter(st);
     if (st.type === "cover" || st.type === "obs") {
       return '<div class="wiz-stage solo">' + center +
-        '<div class="wiz-note">' + I.alert + " Este bloco é <b>texto do modelo</b> — não vem dos PDFs. Ajuste o conteúdo padrão em <b>Editar modelo</b>.</div></div>";
+        '<div class="wiz-note">' + I.alert + "<span>Este bloco é <b>texto do modelo</b> — não vem dos PDFs. Ajuste o conteúdo padrão em <b>Editar modelo</b>.</span></div></div>";
     }
     // fontes por coluna
     const sources = P.columns.map((col, ci) => wizSource(st, ci)).join("");
@@ -991,6 +1010,7 @@
       "px;top:" + (h.bbox[1] * sc).toFixed(1) + "px;width:" + ((h.bbox[2] - h.bbox[0]) * sc).toFixed(1) +
       "px;height:" + ((h.bbox[3] - h.bbox[1]) * sc).toFixed(1) + 'px" title="' + esc(h.value || "") + '"></div>').join("");
     return '<div class="ws-page" style="width:' + W + "px;height:" + (meta.h * sc).toFixed(0) + 'px">' + bg + marks +
+      (url ? '<div class="ws-zoom-hint">' + I.zoom + " passe o mouse p/ ampliar</div>" : "") +
       '<div class="ws-pg-tag">p' + pn + "</div></div>";
   }
   function hcol(col) { return S.proposal.columns.indexOf(col); }
@@ -1001,23 +1021,22 @@
       "px;font-size:" + Math.max(4, (f.bbox[3] - f.bbox[1]) * sc * 0.9).toFixed(1) + 'px">' + esc(f.text) + "</div>").join("");
   }
 
-  function wizCrop(col, h) {
-    const meta = pageMeta(col, h.page); if (!meta) return "";
-    const url = imgUrl(col, h.page);
-    const Wc = 300;
+  function cropUrl(col, h) {
+    if (!col.doc_id) return null;
     const vw = h.bbox[2] - h.bbox[0], vh = h.bbox[3] - h.bbox[1];
-    const padx = Math.max(10, vw * 0.15), pady = Math.max(4, vh * 0.35); // margem folgada horizontal, apertada vertical
-    const bw = vw + padx * 2, bh = vh + pady * 2;
-    const k = Wc / bw; // fator para preencher a largura do recorte
+    const padx = Math.max(12, vw * 0.15);
+    const padTop = 2.5, padBot = Math.max(4, vh * 0.35); // topo apertado evita o cabeçalho da tabela
+    const x0 = (h.bbox[0] - padx).toFixed(1), y0 = (h.bbox[1] - padTop).toFixed(1);
+    const x1 = (h.bbox[2] + padx).toFixed(1), y1 = (h.bbox[3] + padBot).toFixed(1);
+    return API + "/crop?doc=" + encodeURIComponent(col.doc_id) + "&p=" + h.page +
+      "&x0=" + x0 + "&y0=" + y0 + "&x1=" + x1 + "&y1=" + y1;
+  }
+  function wizCrop(col, h) {
     const label = fieldLabel(h.key);
-    let media;
-    if (url) {
-      media = '<div class="wc-crop" style="width:' + Wc + "px;height:" + (bh * k).toFixed(0) +
-        "px;background-image:url(" + url + ");background-size:" + (meta.w * k).toFixed(1) +
-        "px auto;background-position:-" + ((h.bbox[0] - padx) * k).toFixed(1) + "px -" + ((h.bbox[1] - pady) * k).toFixed(1) + 'px"></div>';
-    } else {
-      media = '<div class="wc-crop facs" style="width:' + Wc + "px;height:" + Math.max(34, bh * k).toFixed(0) + 'px">' + esc(h.value || "") + "</div>";
-    }
+    const url = cropUrl(col, h);
+    const media = url
+      ? '<div class="wc-crop"><img class="wc-crop-img" src="' + url + '" alt="' + esc(h.value || "") + '" loading="lazy"></div>'
+      : '<div class="wc-crop facs">' + esc(h.value || "") + "</div>";
     return '<div class="ws-crop-item" data-hl="' + esc(h.key) + "_" + hcol(col) + '"><div class="wc-crop-lbl">' + esc(label) +
       '<span class="muted"> · p' + h.page + "</span></div>" + media + "</div>";
   }
@@ -1048,6 +1067,35 @@
       const cell = body.querySelector('.wcap[data-hl="' + cssEsc(m.dataset.hl) + '"]');
       if (cell) { cell.focus(); document.getSelection().selectAllChildren(cell); }
     }));
+    // lupa/zoom nas páginas de origem (modo "Destaque na página")
+    body.querySelectorAll(".ws-page").forEach(attachMagnifier);
+  }
+
+  function attachMagnifier(pageEl) {
+    const img = pageEl.querySelector(".ws-img");
+    if (!img || pageEl.dataset.mag) return;
+    pageEl.dataset.mag = "1";
+    const ZOOM = 2.5, LENS = 168;
+    let lens = null;
+    const ensure = () => {
+      if (lens) return;
+      lens = document.createElement("div");
+      lens.className = "mag-lens";
+      lens.style.width = lens.style.height = LENS + "px";
+      lens.style.backgroundImage = "url(" + img.src + ")";
+      pageEl.appendChild(lens);
+    };
+    pageEl.addEventListener("mousemove", (e) => {
+      const r = pageEl.getBoundingClientRect();
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      if (x < 0 || y < 0 || x > r.width || y > r.height) { if (lens) lens.style.display = "none"; return; }
+      ensure(); lens.style.display = "block";
+      lens.style.backgroundSize = (r.width * ZOOM).toFixed(0) + "px " + (r.height * ZOOM).toFixed(0) + "px";
+      lens.style.backgroundPosition = (-(x * ZOOM - LENS / 2)).toFixed(0) + "px " + (-(y * ZOOM - LENS / 2)).toFixed(0) + "px";
+      lens.style.left = (x - LENS / 2).toFixed(0) + "px";
+      lens.style.top = (y - LENS / 2).toFixed(0) + "px";
+    });
+    pageEl.addEventListener("mouseleave", () => { if (lens) { lens.remove(); lens = null; } });
   }
   function cssEsc(s) { return String(s).replace(/"/g, '\\"'); }
   function highlightFor(hl, on) {

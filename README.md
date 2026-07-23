@@ -1,4 +1,4 @@
-# Orçamentos NEWA · v0.1
+# Orçamentos NEWA · v0.2
 
 Aplicativo para **gerar propostas comparativas de seguro auto** a partir dos PDFs de
 cotação de várias seguradoras. Você envia os PDFs, o app reconhece e normaliza os
@@ -9,7 +9,7 @@ pronta para enviar ao cliente.
 Distribuído como **plugin do WordPress** e também executável localmente para
 desenvolvimento/edição ao vivo do visual.
 
-> **Status:** v0.1 — funcional ponta a ponta em desenvolvimento local (servidor Python
+> **Status:** v0.2 — funcional ponta a ponta em desenvolvimento local (servidor Python
 > de live-edit). Portabilidade para o plugin WordPress e mais perfis de seguradora estão
 > no [`TODO.md`](TODO.md).
 
@@ -25,8 +25,12 @@ desenvolvimento/edição ao vivo do visual.
   Confirmar).
 - **Assistente de conferência por etapas** (abre automaticamente antes de gerar): mostra,
   seção por seção, o **resultado final no centro** e os **PDFs de origem de cada lado**,
-  com a região de cada valor **marcada em marca-texto** (modo *Destaque na página*) ou
-  **recortada** (modo *Recortes*). Tudo **editável** ali mesmo.
+  com a região de cada valor **marcada em marca-texto** (modo *Destaque na página*, com
+  **lupa** ao passar o mouse) ou **recortada** da imagem real (modo *Recortes*, recorte
+  gerado no servidor). Tudo **editável** ali mesmo; campos pendentes destacados e o botão
+  *Preencher vazios* resolve todos de uma vez.
+- **Banner de comparação:** o documento final abre indicando **quais seguradoras** estão
+  sendo comparadas (logo + nome de cada uma).
 - **Painel "Deixado de fora":** valores em R$ presentes no PDF que nenhum campo capturou,
   promovíveis a um campo.
 - **Comparativo lado a lado** com o cabeçalho de cada coluna na cor/logo da marca da
