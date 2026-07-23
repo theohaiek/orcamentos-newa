@@ -247,35 +247,70 @@
      ========================================================================= */
   function viewNova() {
     if (S.proposal) return renderReview();
+    if (!S.nova) S.nova = { count: 2, files: [null, null, null, null, null] };
+    const N = S.nova;
     root().innerHTML = shell("Nova Proposta", "Enviar cotações");
     const c = $("#view-content");
     c.innerHTML =
-      '<div class="stagger" style="max-width:760px">' +
-      '<div class="drop" id="dz"><input type="file" id="fi" accept="application/pdf" multiple hidden>' +
-      '<div class="ic">' + I.upload + "</div>" +
-      "<h3>Arraste os PDFs das seguradoras aqui</h3>" +
-      "<p>ou clique para selecionar — um arquivo por cotação (PDF)</p></div>" +
-      '<div class="filelist" id="fl"></div>' +
-      '<div id="startwrap" style="margin-top:18px" class="hidden">' +
-      '<button class="btn lg" id="startbtn">' + I.check + " Extrair e comparar</button></div>" +
+      '<div class="stagger" style="max-width:900px">' +
+      '<div class="nova-top">' +
+      '<div><h3 style="font-size:17px">Quantas propostas comparar?</h3>' +
+      '<p class="muted" style="font-size:13px;margin-top:2px">Um PDF por proposta — cada uma vira uma coluna do comparativo.</p></div>' +
+      '<div class="seg" id="seg">' +
+      [1, 2, 3, 4, 5].map((n) => '<button data-n="' + n + '"' + (n === N.count ? ' class="active"' : "") + ">" + n + "</button>").join("") +
+      "</div></div>" +
+      '<div class="slots" id="slots"></div>' +
+      '<div id="startwrap" style="margin-top:22px" class="hidden">' +
+      '<button class="btn lg" id="startbtn">' + I.check + " Extrair e comparar</button>" +
+      '<span class="muted" id="starthint" style="margin-left:14px;font-size:13px"></span></div>' +
       "</div>";
-    const dz = $("#dz"), fi = $("#fi"), fl = $("#fl");
-    let files = [];
-    const render = () => {
-      fl.innerHTML = files.map((f, i) =>
-        '<div class="filerow"><div class="fic">' + I.doc + '</div><div class="meta"><b>' + esc(f.name) +
-        "</b><span>" + (f.size / 1024).toFixed(0) + " KB</span></div>" +
-        '<button class="btn icon ghost" data-rm="' + i + '">' + I.x + "</button></div>").join("");
-      fl.querySelectorAll("[data-rm]").forEach((b) => (b.onclick = () => { files.splice(+b.dataset.rm, 1); render(); }));
-      $("#startwrap").classList.toggle("hidden", files.length === 0);
+    const slotsEl = $("#slots");
+    const setFile = (i, f) => {
+      if (!(f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"))) { toast("Envie um arquivo PDF.", "err"); return; }
+      N.files[i] = f; renderSlots(); updateStart();
     };
-    const add = (list) => { for (const f of list) if (f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")) files.push(f); render(); };
-    dz.onclick = () => fi.click();
-    fi.onchange = () => add(fi.files);
-    ["dragenter", "dragover"].forEach((e) => dz.addEventListener(e, (ev) => { ev.preventDefault(); dz.classList.add("drag"); }));
-    ["dragleave", "drop"].forEach((e) => dz.addEventListener(e, (ev) => { ev.preventDefault(); dz.classList.remove("drag"); }));
-    dz.addEventListener("drop", (ev) => add(ev.dataTransfer.files));
-    $("#startbtn").onclick = () => extract(files);
+    const updateStart = () => {
+      const chosen = N.files.slice(0, N.count).filter(Boolean).length;
+      const ready = chosen === N.count;
+      $("#startwrap").classList.toggle("hidden", chosen === 0);
+      $("#startbtn").disabled = !ready;
+      $("#starthint").textContent = ready ? "" : (N.count - chosen) + " proposta(s) sem PDF";
+    };
+    const renderSlots = () => {
+      let html = "";
+      for (let i = 0; i < N.count; i++) {
+        const f = N.files[i];
+        if (f) {
+          html +=
+            '<div class="slot filled" data-i="' + i + '"><div class="scap">Proposta ' + (i + 1) + "</div>" +
+            '<div class="sfile"><div class="fic">' + I.doc + '</div><div class="meta"><b>' + esc(f.name) +
+            "</b><span>" + (f.size / 1024).toFixed(0) + ' KB</span></div><button class="btn icon ghost" data-rm="' + i + '">' + I.x + "</button></div></div>";
+        } else {
+          html +=
+            '<div class="slot" data-i="' + i + '"><div class="scap">Proposta ' + (i + 1) + "</div>" +
+            '<div class="sic">' + I.upload + '</div><div class="slabel">Enviar proposta ' + (i + 1) + "</div>" +
+            '<div class="shint">clique ou arraste um PDF</div>' +
+            '<input type="file" accept="application/pdf" data-fi="' + i + '" hidden></div>';
+        }
+      }
+      slotsEl.innerHTML = html;
+      slotsEl.querySelectorAll(".slot:not(.filled)").forEach((sl) => {
+        const i = +sl.dataset.i, inp = sl.querySelector("input");
+        sl.onclick = () => inp.click();
+        inp.onchange = () => { if (inp.files[0]) setFile(i, inp.files[0]); };
+        ["dragenter", "dragover"].forEach((e) => sl.addEventListener(e, (ev) => { ev.preventDefault(); sl.classList.add("drag"); }));
+        ["dragleave", "drop"].forEach((e) => sl.addEventListener(e, (ev) => { ev.preventDefault(); sl.classList.remove("drag"); }));
+        sl.addEventListener("drop", (ev) => { const f = ev.dataTransfer.files[0]; if (f) setFile(i, f); });
+      });
+      slotsEl.querySelectorAll("[data-rm]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); N.files[+b.dataset.rm] = null; renderSlots(); updateStart(); }));
+    };
+    $("#seg").querySelectorAll("button").forEach((b) => (b.onclick = () => {
+      N.count = +b.dataset.n;
+      $("#seg").querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b));
+      renderSlots(); updateStart();
+    }));
+    renderSlots(); updateStart();
+    $("#startbtn").onclick = () => extract(N.files.slice(0, N.count).filter(Boolean));
   }
 
   async function extract(files) {
@@ -340,7 +375,7 @@
     c.innerHTML =
       '<div id="reviewnote"></div>' +
       '<div class="orca-doc" id="doc">' + buildDoc(P, true) + "</div>";
-    $("#backbtn").onclick = () => { if (confirm("Descartar esta proposta e recomeçar?")) { S.proposal = null; viewNova(); } };
+    $("#backbtn").onclick = () => { if (confirm("Descartar esta proposta e recomeçar?")) { S.proposal = null; S.nova = null; viewNova(); } };
     $("#fillbtn").onclick = () => { fillEmpties(); };
     $("#expbtn").onclick = () => doExport();
     wireDoc();
@@ -383,9 +418,12 @@
     const colHead = (col, i) => {
       const ins = insurerById(col.insurer_id);
       const fg = ins.text === "dark" ? "#141414" : "#fff";
+      const inner = ins.logo_small
+        ? '<span class="logochip"><img src="' + esc(ins.logo_small) + '" alt="' + esc(ins.name) + '"></span>'
+        : '<span class="nm">' + esc(ins.name) + "</span>";
       return '<div class="col-head" data-col="' + i + '" style="background:' + ins.color + ";color:" + fg + '">' +
         '<span class="badge" style="background:rgba(' + (ins.text === "dark" ? "0,0,0,.12" : "255,255,255,.28") + ')">' + (i + 1) + "</span>" +
-        '<span class="nm">' + esc(ins.name) + "</span></div>";
+        inner + "</div>";
     };
     const secBar = (title) =>
       '<div class="sec-bar with-cols" style="--ncols:' + ncols + ";--labelw:" + labelw + '">' +
@@ -400,8 +438,10 @@
 
     /* ---- CAPA ---- */
     const nome = (P.info.segurado || "Cliente").split(" ")[0];
-    const strip = S.insurers.filter((x) => x.id !== "generico").slice(0, 14)
-      .map((x) => '<span class="ins" style="background:' + x.color + '">' + esc(x.name) + "</span>").join("");
+    const strip = S.insurers.filter((x) => x.id !== "generico")
+      .map((x) => x.logo
+        ? '<div class="ins-logo"><img src="' + esc(x.logo) + '" alt="' + esc(x.name) + '"></div>'
+        : '<span class="ins-txt">' + esc(x.name) + "</span>").join("");
     const cover =
       '<div class="doc-page cover" data-page="1"><div class="topgrad"></div><div class="safe">' +
       '<div class="logo"><img class="logo-img" src="' + LOGO + '" alt="NEWA Seguros"></div>' +
@@ -424,10 +464,13 @@
       "</div></div></div></div>";
 
     /* ---- COMPARATIVO ---- */
-    const infoGrid =
-      '<div class="rows info">' +
-      INFO.map(([k, lbl]) => '<div class="inforow"><div class="lbl">' + esc(lbl) + ":</div>" + infoCap(k) + "</div>").join("") +
-      "</div>";
+    const inforow = ([k, lbl]) => '<div class="inforow"><div class="lbl">' + esc(lbl) + ":</div>" + infoCap(k) + "</div>";
+    const infoFull = INFO.slice(0, 4);   // segurado, veiculo, ano_modelo, principal_condutor
+    const infoPairs = INFO.slice(4);     // data, validade, uso, fipe, condutores, cep
+    let pairsHTML = "";
+    for (let i = 0; i < infoPairs.length; i += 2)
+      pairsHTML += '<div class="infopair">' + inforow(infoPairs[i]) + (infoPairs[i + 1] ? inforow(infoPairs[i + 1]) : "") + "</div>";
+    const infoGrid = '<div class="rows infoblock">' + infoFull.map(inforow).join("") + pairsHTML + "</div>";
     const obs =
       '<div class="obs"><div class="obs-t">Observações</div><ul' + (editable ? ' contenteditable="true" data-obs="1"' : "") + ">" +
       P.obs.map((o) => "<li>" + esc(o) + "</li>").join("") + "</ul></div>";
@@ -548,7 +591,7 @@
     tb.querySelectorAll("[data-del]").forEach((b) => (b.onclick = () => delInsurer(+b.dataset.del)));
   }
   function editInsurer(idx) {
-    const x = idx == null ? { id: "", name: "", color: "#12703A", color2: "#1F9E4A", text: "light", abbr: "", detect: [] } : S.insurers[idx];
+    const x = idx == null ? { id: "", name: "", color: "#12703A", color2: "#1F9E4A", text: "light", abbr: "", detect: [], logo: "", logo_small: "" } : S.insurers[idx];
     modal({
       title: idx == null ? "Nova seguradora" : "Editar seguradora",
       bodyHTML:
@@ -556,10 +599,12 @@
         '<div class="field"><label>ID (sem espaços, minúsculo)</label><input class="input" id="mid" value="' + esc(x.id) + '"' + (idx != null ? " disabled" : "") + "></div>" +
         '<div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>Cor da marca</label><input class="input" type="color" id="mc" value="' + esc(x.color) + '" style="height:44px;padding:4px"></div>' +
         '<div class="field" style="flex:1"><label>Texto do cabeçalho</label><select class="select input" id="mt"><option value="light"' + (x.text !== "dark" ? " selected" : "") + '>Claro</option><option value="dark"' + (x.text === "dark" ? " selected" : "") + ">Escuro</option></select></div></div>" +
-        '<div class="field"><label>Palavras-chave (separe por vírgula)</label><input class="input" id="md" value="' + esc((x.detect || []).join(", ")) + '"></div>',
+        '<div class="field"><label>Palavras-chave (separe por vírgula)</label><input class="input" id="md" value="' + esc((x.detect || []).join(", ")) + '"></div>' +
+        '<div class="field"><label>Logo grande — com texto (URL, usado na capa)</label><input class="input" id="mlg" value="' + esc(x.logo || "") + '" placeholder="https://..."></div>' +
+        '<div class="field"><label>Logo pequeno — sem texto (URL, usado no cabeçalho da coluna)</label><input class="input" id="mls" value="' + esc(x.logo_small || "") + '" placeholder="https://..."></div>',
       onOk: async (ov) => {
         const g = (s) => ov.querySelector(s).value.trim();
-        const obj = { id: g("#mid") || g("#mn").toLowerCase().replace(/\s+/g, ""), name: g("#mn"), color: g("#mc"), color2: x.color2 || g("#mc"), text: g("#mt"), abbr: (x.abbr || g("#mn").slice(0, 2).toUpperCase()), detect: g("#md").split(",").map((s) => s.trim()).filter(Boolean) };
+        const obj = { id: g("#mid") || g("#mn").toLowerCase().replace(/\s+/g, ""), name: g("#mn"), color: g("#mc"), color2: x.color2 || g("#mc"), text: g("#mt"), abbr: (x.abbr || g("#mn").slice(0, 2).toUpperCase()), detect: g("#md").split(",").map((s) => s.trim()).filter(Boolean), logo: g("#mlg"), logo_small: g("#mls") };
         if (!obj.name) { toast("Informe o nome.", "err"); return false; }
         if (idx == null) S.insurers.splice(S.insurers.length - 1, 0, obj); else S.insurers[idx] = obj;
         await saveInsurers(); renderInsurersTable();

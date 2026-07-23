@@ -20,6 +20,10 @@ desktop.ini
 __pycache__/
 *.pyc
 
+# Cache de download dos logos (não versionar)
+orcamentos-newa/assets/logos/_raw/
+orcamentos-newa/assets/logos/_map.json
+
 # Build / temporários
 *.log
 dist/

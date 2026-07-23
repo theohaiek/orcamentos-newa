@@ -14,8 +14,8 @@
   --green-400: #33B860;
   --green-100: #E7F5EC;
   --green-50:  #F2FAF5;
-  --grad: linear-gradient(90deg, #E5308A 0%, #F5A623 38%, #F7E018 64%, #1F9E4A 100%);
-  --grad-soft: linear-gradient(90deg, #E5308A22 0%, #F5A62322 38%, #F7E01822 64%, #1F9E4A22 100%);
+  --grad: linear-gradient(90deg, #8FE39B 0%, #33B860 30%, #1F9E4A 58%, #0E5230 100%);
+  --grad-soft: linear-gradient(90deg, #8FE39B22 0%, #33B86022 30%, #1F9E4A22 58%, #0E523022 100%);
 
   /* Neutros */
   --ink:    #14201A;
@@ -210,6 +210,36 @@ textarea.input { padding: 12px 14px; min-height: 84px; line-height: 1.5; resize:
 .drop .ic svg { width: 28px; height: 28px; }
 .drop h3 { font-size: 17px; }
 .drop p { color: var(--ink-2); font-size: 13.5px; margin-top: 4px; }
+
+/* ---------- Nova Proposta: seletor + slots ---------- */
+.nova-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 6px; flex-wrap: wrap; }
+.seg { display: inline-flex; background: #fff; border-radius: 999px; padding: 4px; gap: 2px; box-shadow: inset 0 0 0 1px var(--line-2), var(--sh-1); }
+.seg button { min-width: 40px; height: 36px; border: none; background: transparent; border-radius: 999px; font-weight: 650; color: var(--ink-2); cursor: pointer;
+  transition-property: background-color, color, transform; transition-duration: .15s; font-variant-numeric: tabular-nums; }
+.seg button:hover { color: var(--green-700); }
+.seg button.active { background: var(--green-700); color: #fff; box-shadow: var(--sh-1); }
+.seg button:active { transform: scale(.96); }
+
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(228px, 1fr)); gap: 14px; margin-top: 18px; }
+.slot { position: relative; border-radius: var(--r-lg); background: #fff; box-shadow: inset 0 0 0 2px var(--line-2);
+  padding: 20px 18px; min-height: 168px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center;
+  transition-property: box-shadow, background-color, transform; transition-duration: .18s; }
+.slot:hover { box-shadow: inset 0 0 0 2px var(--green-400); background: var(--green-50); }
+.slot:active { transform: scale(.99); }
+.slot.drag { box-shadow: inset 0 0 0 2.5px var(--green-500), 0 0 0 6px var(--green-100); background: var(--green-50); }
+.slot .scap { position: absolute; top: 12px; left: 16px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.slot .sic { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; background: var(--green-50); color: var(--green-700); box-shadow: var(--sh-1); margin-top: 8px; }
+.slot .sic svg { width: 24px; height: 24px; }
+.slot .slabel { font-weight: 650; font-family: var(--font-display); }
+.slot .shint { font-size: 12.5px; color: var(--ink-3); }
+.slot.filled { cursor: default; align-items: stretch; justify-content: flex-start; box-shadow: inset 0 0 0 2px #BFE6CD; background: var(--green-50); }
+.slot.filled:hover { transform: none; }
+.slot .sfile { display: flex; align-items: center; gap: 11px; margin-top: 26px; width: 100%; }
+.slot .sfile .fic { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; flex: none; background: #fff; color: var(--green-700); box-shadow: var(--sh-1); }
+.slot .sfile .fic svg { width: 20px; height: 20px; }
+.slot .sfile .meta { min-width: 0; flex: 1; text-align: left; }
+.slot .sfile .meta b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 13.5px; }
+.slot .sfile .meta span { font-size: 12px; color: var(--ink-3); }
 
 /* lista de arquivos enviados */
 .filelist { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
