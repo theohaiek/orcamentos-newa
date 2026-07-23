@@ -223,6 +223,10 @@ textarea.input { padding: 12px 14px; min-height: 84px; line-height: 1.5; resize:
 .seg button:hover { color: var(--green-700); }
 .seg button.active { background: var(--green-700); color: #fff; box-shadow: var(--sh-1); }
 .seg button:active { transform: scale(.96); }
+.seg button[data-beta] { position: relative; }
+.seg button[data-beta]::after { content: "beta"; position: absolute; top: -7px; right: -4px; font-size: 8px; font-weight: 800; letter-spacing: .02em;
+  background: var(--warn); color: #4a3800; padding: 1px 4px; border-radius: 6px; line-height: 1.3; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+.seg button[data-beta].active::after { background: #FDF6E3; }
 
 .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(228px, 1fr)); gap: 14px; margin-top: 18px; }
 .slot { position: relative; border-radius: var(--r-lg); background: #fff; box-shadow: inset 0 0 0 2px var(--line-2);

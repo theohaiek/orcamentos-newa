@@ -296,10 +296,11 @@
       '<div class="stagger" style="max-width:900px">' +
       '<div class="nova-top">' +
       '<div><h3 style="font-size:17px">Quantas propostas comparar?</h3>' +
-      '<p class="muted" style="font-size:13px;margin-top:2px">Um PDF por proposta — cada uma vira uma coluna do comparativo.</p></div>' +
+      '<p class="muted" style="font-size:13px;margin-top:2px">Um PDF por proposta — cada uma vira uma coluna do comparativo. <b>2 é o modo recomendado.</b></p></div>' +
       '<div class="seg" id="seg">' +
-      [1, 2, 3, 4, 5].map((n) => '<button data-n="' + n + '"' + (n === N.count ? ' class="active"' : "") + ">" + n + "</button>").join("") +
+      [1, 2, 3, 4, 5].map((n) => '<button data-n="' + n + '"' + (n === N.count ? ' class="active"' : "") + (n !== 2 ? ' data-beta="1"' : "") + ">" + n + "</button>").join("") +
       "</div></div>" +
+      '<div id="betawarn"></div>' +
       '<div class="slots" id="slots"></div>' +
       '<div id="startwrap" style="margin-top:22px" class="hidden">' +
       '<button class="btn lg" id="startbtn">' + I.check + " Extrair e comparar</button>" +
@@ -345,12 +346,19 @@
       });
       slotsEl.querySelectorAll("[data-rm]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); N.files[+b.dataset.rm] = null; renderSlots(); updateStart(); }));
     };
+    const updateBeta = () => {
+      const bw = $("#betawarn");
+      bw.innerHTML = N.count === 2 ? "" :
+        '<div class="alert warn" style="margin:14px 0 0">' + I.alert +
+        "<span><b>Em desenvolvimento — pode apresentar bugs.</b> Comparar <b>" + N.count +
+        "</b> proposta(s) ainda não é totalmente estável. O modo recomendado e testado é <b>2 propostas</b>.</span></div>";
+    };
     $("#seg").querySelectorAll("button").forEach((b) => (b.onclick = () => {
       N.count = +b.dataset.n;
       $("#seg").querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b));
-      renderSlots(); updateStart();
+      renderSlots(); updateStart(); updateBeta();
     }));
-    renderSlots(); updateStart();
+    renderSlots(); updateStart(); updateBeta();
     $("#startbtn").onclick = () => extract(N.files.slice(0, N.count).filter(Boolean));
   }
 

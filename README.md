@@ -1,29 +1,44 @@
-# Orçamentos NEWA
+# Orçamentos NEWA · v0.1
 
 Aplicativo para **gerar propostas comparativas de seguro auto** a partir dos PDFs de
 cotação de várias seguradoras. Você envia os PDFs, o app reconhece e normaliza os
-campos automaticamente (extração de texto + IA), você revisa e exporta uma
+campos automaticamente, confere **de onde veio cada dado** e exporta uma
 **Proposta de Seguro** de 2 páginas (capa personalizada + comparativo lado a lado),
 pronta para enviar ao cliente.
 
 Distribuído como **plugin do WordPress** e também executável localmente para
 desenvolvimento/edição ao vivo do visual.
 
+> **Status:** v0.1 — funcional ponta a ponta em desenvolvimento local (servidor Python
+> de live-edit). Portabilidade para o plugin WordPress e mais perfis de seguradora estão
+> no [`TODO.md`](TODO.md).
+
 ---
 
 ## Principais recursos
 
-- **Reconhecimento automático de PDFs** de qualquer seguradora (layout livre), com
-  extração de texto nativa + normalização por IA (OpenAI) e detecção da seguradora.
-- **Comparativo lado a lado** com o cabeçalho de cada coluna na **cor da marca** da
-  seguradora correspondente (editável).
-- **Revisão editável in-place** antes de exportar. Campos vazios ficam destacados em
-  vermelho e **bloqueiam a exportação** — nunca gera um PDF incompleto ou incorreto.
+- **Extração híbrida (determinística + IA):** um **perfil por layout** extrai os campos
+  por posição/rótulo (rápido, gratuito, auditável); a **IA (OpenAI)** entra apenas como
+  *fallback* para o que o perfil não resolver, com o valor **verificado no texto do PDF**.
+- **Proveniência de cada dado:** todo campo carrega sua origem (página, posição, trecho,
+  rótulo-âncora). Na revisão, um ponto colorido indica o método (Perfil / IA verificada /
+  Confirmar).
+- **Assistente de conferência por etapas** (abre automaticamente antes de gerar): mostra,
+  seção por seção, o **resultado final no centro** e os **PDFs de origem de cada lado**,
+  com a região de cada valor **marcada em marca-texto** (modo *Destaque na página*) ou
+  **recortada** (modo *Recortes*). Tudo **editável** ali mesmo.
+- **Painel "Deixado de fora":** valores em R$ presentes no PDF que nenhum campo capturou,
+  promovíveis a um campo.
+- **Comparativo lado a lado** com o cabeçalho de cada coluna na cor/logo da marca da
+  seguradora (editável).
+- **Nunca gera incompleto:** campos obrigatórios vazios bloqueiam a geração e são
+  destacados; erros de extração aparecem com o motivo.
+- **Editor de modelo:** edite o layout do documento gerado (seções, campos, textos,
+  ordem) com pré-visualização em placeholders.
 - **Exportação em PDF** (capa + comparativo) com um clique.
-- **Login** com usuários próprios do sistema; administradores criam/editam usuários
-  pela seção **Usuários**. Primeira conta: `Madu` / `123`.
-- **Modelos de Entrada**: registro das seguradoras aceitas (nome, cor da marca,
-  palavras-chave de reconhecimento) — adicione novas pela UI.
+- **Login** com usuários próprios; administradores gerenciam contas em **Usuários**.
+  Primeira conta: `Madu` / `123`.
+- **Modelos de Entrada:** registro das seguradoras (nome, cor, logos, palavras-chave).
 - Estética **NEWA**: verde-floresta + acento gradiente.
 
 ---
@@ -33,33 +48,35 @@ desenvolvimento/edição ao vivo do visual.
 ```
 app-orçamentos-newa/
 ├── data/
-│   └── insurers.json          # registro-semente de seguradoras (cores/keywords)
+│   ├── insurers.json           # registro de seguradoras (cores, logos, keywords)
+│   └── profiles/               # perfis de extração determinística por layout
+│       └── tradicional.json
 ├── docs/
-│   └── spec.md                # especificação, decisões e assumptions
-├── orcamentos-newa/           # === o plugin WordPress (pasta que vira o .zip) ===
-│   ├── orcamentos-newa.php     # (em construção) bootstrap do plugin + shortcode
-│   ├── includes/               # (em construção) auth, extração, REST, registro
-│   ├── templates/              # (em construção) shell da SPA para o shortcode
+│   └── spec.md                 # especificação, arquitetura e decisões
+├── orcamentos-newa/            # === o plugin WordPress (pasta que vira o .zip) ===
 │   └── assets/
 │       ├── app.css             # design system da UI
 │       ├── proposal.css        # layout do documento exportável
-│       ├── app.js              # SPA (login, upload, revisão, export, admin)
+│       ├── app.js              # SPA (login, upload, extração, conferência, export, admin)
+│       ├── logo-newa.png, logos/  # logo NEWA + logos das seguradoras
 │       └── vendor/             # jsPDF + html2canvas (self-contained)
-└── README.md
+├── README.md
+└── TODO.md
 ```
 
-> O servidor de desenvolvimento (`server.py`) e o shell (`index.html`) ficam **fora**
-> deste repositório (na pasta-pai), pois são apenas ferramentas de edição ao vivo.
+> O servidor de desenvolvimento (`server.py`, `extract_engine.py`) e o shell
+> (`index.html`) ficam **fora** deste repositório (na pasta-pai) — são ferramentas de
+> edição ao vivo e trazem a chave de API em `.env` (nunca versionada).
 
 ---
 
 ## Desenvolvimento local (edição ao vivo)
 
-Pré-requisito: **Python 3.8+** com `pymupdf` e `openai`
-(`pip install pymupdf openai`).
+Pré-requisito: **Python 3.8+** com `pymupdf` e `openai` (`pip install pymupdf openai`).
 
-1. Na pasta-pai (que contém `server.py`), crie um `.env` com sua `OPENAI_API_KEY`
-   (ou configure depois pela UI em *Configurações*).
+1. Na pasta-pai (que contém `server.py`), crie um `.env` a partir de
+   [`.env.example`](.env.example) com sua `OPENAI_API_KEY` (ou configure depois pela UI
+   em *Configurações*).
 2. Rode:
 
    ```
@@ -68,27 +85,28 @@ Pré-requisito: **Python 3.8+** com `pymupdf` e `openai`
 
 3. Abre sozinho em `http://localhost:8080/` — entre com **Madu / 123**.
 
-Edite os arquivos em `orcamentos-newa/assets/` e recarregue a página (F5) para ver as
-mudanças. O servidor serve os assets sem cache.
+Edite os arquivos em `orcamentos-newa/assets/` e recarregue a página (F5) — o servidor
+injeta *cache-busting*, então um F5 normal já pega a versão nova.
 
 ---
 
-## Como funciona a extração
+## Como funciona a extração (pipeline de 3 camadas)
 
-1. O texto nativo do PDF é extraído (PyMuPDF).
-2. O texto é enviado a um modelo da OpenAI com um **schema estrito** (JSON Schema),
-   que devolve os campos normalizados e a lista de campos não encontrados.
-3. A seguradora é detectada pelo conteúdo (e nome do arquivo) e define a cor da coluna.
-4. Na revisão, campos ausentes ficam vermelhos e travam a exportação até serem
-   preenchidos ou marcados como *Não Contratado*.
+1. **Tokenização posicional** (PyMuPDF): cada palavra do PDF com sua página e posição.
+2. **Camada 1 — perfil determinístico** (`data/profiles/*.json`): âncora por rótulo +
+   captura posicional + validação por regex. Gera a proveniência exata.
+3. **Camada 2 — validação/drift:** campo sem âncora/regex cai para a IA; muitos campos
+   falhando sinalizam "layout pode ter mudado".
+4. **Camada 3 — IA (fallback):** só para o que faltou; o valor é localizado no texto do
+   PDF (string-match). Sem match → confiança baixa e o campo fica pendente.
 
-Se um PDF não tiver texto (escaneado), a extração falha com aviso claro — o fallback
-por visão da IA está previsto na especificação.
+PDFs escaneados (sem texto) ainda não são suportados — fallback de visão previsto no
+[`TODO.md`](TODO.md).
 
 ---
 
 ## Deploy como plugin WordPress
 
 O empacotamento em `.zip` e a instalação via *WP Admin → Plugins → Adicionar novo →
-Enviar plugin* estão descritos em [`docs/spec.md`](docs/spec.md). O login usa o
-sistema de usuários do próprio WordPress.
+Enviar plugin* estão descritos em [`docs/spec.md`](docs/spec.md). O login usará o
+sistema de usuários do próprio WordPress. (Em desenvolvimento — ver `TODO.md`.)
