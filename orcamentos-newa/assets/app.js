@@ -26,6 +26,7 @@
     edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>',
     dl: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M19 12H5m0 0 7 7m-7-7 7-7"/></svg>',
+    fwd: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12h14m0 0-7-7m7 7-7 7"/></svg>',
     phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z"/></svg>',
     mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 6 10 7 10-7"/></svg>',
     pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
@@ -373,7 +374,7 @@
         const insurer_id = r.insurer_id || detectInsurer(r.raw_text, files[i].name);
         columns.push({
           filename: files[i].name, insurer_id, fields: r.fields, missing: r.missing || [],
-          provenance: r.provenance || {}, unmapped: r.unmapped || [], pages: r.pages || [],
+          provenance: r.provenance || {}, unmapped: r.unmapped || [], pages: r.pages || [], doc_id: r.doc_id || null,
           profile_used: !!r.profile_used, profile_id: r.profile_id || null, ai_used: !!r.ai_used, drift: !!r.drift,
         });
         row.className = "st done"; row.innerHTML = I.check + " ok";
@@ -422,7 +423,7 @@
       '<button class="btn secondary" id="unmapbtn">' + I.layers + " Não mapeado" + (nUnmapped ? " (" + nUnmapped + ")" : "") + "</button>" +
       '<button class="btn secondary" id="backbtn">' + I.back + " Recomeçar</button>" +
       '<button class="btn secondary" id="fillbtn">Preencher vazios</button>' +
-      '<button class="btn" id="expbtn">' + I.dl + " Exportar PDF</button>");
+      '<button class="btn" id="expbtn">' + I.check + " Conferir e gerar</button>");
     const c = $("#view-content");
     c.innerHTML =
       '<div id="reviewnote"></div>' +
@@ -439,7 +440,7 @@
     $("#unmapbtn").onclick = () => openUnmapped();
     $("#backbtn").onclick = () => { if (confirm("Descartar esta proposta e recomeçar?")) { S.proposal = null; S.nova = null; viewNova(); } };
     $("#fillbtn").onclick = () => { fillEmpties(); };
-    $("#expbtn").onclick = () => doExport();
+    $("#expbtn").onclick = () => openConfirmWizard();
     wireDoc();
     updateNote();
   }
@@ -529,10 +530,11 @@
         cols.map((col, i) => cap(col.fields[r.key], r.key, i, r.label)).join("") + "</div>").join("") +
       "</div>";
 
-    /* ---- CAPA ---- */
+    /* ---- CAPA (usa override por-proposta, se editado no assistente) ---- */
+    const cv = (P && P.coverOverride) ? Object.assign({}, T.cover, P.coverOverride) : T.cover;
     const nome = ph ? "{{primeiro nome}}" : (P.info.segurado || "Cliente").split(" ")[0];
     const nameHTML = ph ? '<span class="ph-token">{{primeiro nome}}</span>' : "<b>" + esc(nome) + "</b>";
-    let greeting = esc(T.cover.greeting || "Olá, {{primeiro_nome}}").replace("{{primeiro_nome}}", nameHTML);
+    let greeting = esc(cv.greeting || "Olá, {{primeiro_nome}}").replace("{{primeiro_nome}}", nameHTML);
     greeting = greeting.replace(/\{\{([^}]+)\}\}/g, '<span class="ph-token">{{$1}}</span>');
     const strip = S.insurers.filter((x) => x.id !== "generico")
       .map((x) => x.logo
@@ -545,9 +547,9 @@
         '<div class="logo"><img class="logo-img" src="' + LOGO + '" alt="NEWA Seguros"></div>' +
         '<div class="hero-mark">' + MARK + "</div>" +
         '<div class="hello"><h1>' + greeting + "</h1></div>" +
-        '<div class="letter">' + T.cover.paragraphs.map((p) => "<p>" + mark(p) + "</p>").join("") + "</div>" +
+        '<div class="letter">' + cv.paragraphs.map((p) => "<p>" + mark(p) + "</p>").join("") + "</div>" +
         '<div class="spacer"></div>' +
-        (T.cover.showMural ? '<div class="strip-label">' + esc(T.cover.muralLabel || "") + "</div>" + '<div class="insurers-strip">' + strip + "</div>" : "") +
+        (cv.showMural ? '<div class="strip-label">' + esc(cv.muralLabel || "") + "</div>" + '<div class="insurers-strip">' + strip + "</div>" : "") +
         (T.cover.showContact
           ? '<div class="contact">' +
             '<div class="blk"><h4>Atendimento</h4>' +
@@ -756,10 +758,14 @@
   /* =========================================================================
      EXPORT PDF (html2canvas + jsPDF)
      ========================================================================= */
-  async function doExport() {
+  async function doExport(btnSel) {
     if (pending() > 0) { toast("Há campos pendentes. Preencha antes de exportar.", "err"); return; }
     if (!window.jspdf || !window.html2canvas) { toast("Bibliotecas de PDF não carregadas.", "err"); return; }
-    const btn = $("#expbtn"); const old = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Gerando…';
+    const btn = document.querySelector(btnSel || "#expbtn"); const old = btn ? btn.innerHTML : "";
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Gerando…'; }
+    // garante que o documento existe fora do wizard para captura
+    const wiz = document.querySelector(".wiz-overlay"); if (wiz) wiz.style.visibility = "hidden";
+    if (!$("#doc")) renderReview();
     try {
       // clona o doc sem edição para captura limpa
       const src = $("#doc");
@@ -783,10 +789,238 @@
       pdf.save("proposta-newa-" + nome + ".pdf");
       src.querySelectorAll("[contenteditable]").forEach((e) => e.setAttribute("contenteditable", "true"));
       src.classList.remove("exporting");
+      const w = document.querySelector(".wiz-overlay"); if (w) w.remove();
       toast("PDF gerado com sucesso.", "ok");
     } catch (e) {
+      const w = document.querySelector(".wiz-overlay"); if (w) w.style.visibility = "visible";
       toast("Falha ao gerar PDF: " + (e.message || e), "err");
-    } finally { const d = $("#doc"); if (d) d.classList.remove("exporting"); btn.disabled = false; btn.innerHTML = old; }
+    } finally { const d = $("#doc"); if (d) d.classList.remove("exporting"); if (btn) { btn.disabled = false; btn.innerHTML = old; } }
+  }
+
+  /* =========================================================================
+     ASSISTENTE DE CONFIRMAÇÃO (etapas: fonte à vista + resultado editável)
+     ========================================================================= */
+  function buildSteps() {
+    const T = tpl(); const steps = [];
+    if (T.cover.show) steps.push({ type: "cover", title: "Introdução (capa)", rows: [] });
+    steps.push({ type: "info", title: T.infoTitle, rows: T.info.filter((r) => r.show) });
+    T.sections.filter((s) => s.show).forEach((s) => steps.push({ type: "sec", title: s.title, rows: s.rows.filter((r) => r.show) }));
+    if (T.obs.show) steps.push({ type: "obs", title: T.obs.title, rows: [] });
+    return steps;
+  }
+
+  function openConfirmWizard() {
+    if (pending() > 0) { toast("Preencha os campos pendentes antes de conferir.", "err"); return; }
+    S._wiz = { step: 0, mode: "page", steps: buildSteps() };
+    const ex = document.querySelector(".wiz-overlay"); if (ex) ex.remove();
+    const ov = document.createElement("div");
+    ov.className = "overlay wiz-overlay";
+    ov.innerHTML =
+      '<div class="wiz card">' +
+      '<div class="wiz-top"><div class="wiz-ttl"><div class="wiz-eyebrow">Conferência antes de gerar</div><h2 id="wiz-h"></h2></div>' +
+      '<div class="wiz-modes" id="wiz-modes"><span class="pt-lbl">Fonte:</span>' +
+      '<button data-wm="page" class="on">Destaque na página</button><button data-wm="crop">Recortes</button></div>' +
+      '<button class="btn icon ghost" data-wclose>' + I.x + "</button></div>" +
+      '<div class="wiz-steps" id="wiz-steps"></div>' +
+      '<div class="wiz-body" id="wiz-body"></div>' +
+      '<div class="wiz-foot"><button class="btn ghost" id="wiz-prev">' + I.back + " Anterior</button>" +
+      '<div class="wiz-count" id="wiz-count"></div>' +
+      '<button class="btn" id="wiz-next">Próximo</button></div></div>';
+    document.body.appendChild(ov);
+    ov.querySelector("[data-wclose]").onclick = () => ov.remove();
+    ov.querySelectorAll("[data-wm]").forEach((b) => (b.onclick = () => {
+      S._wiz.mode = b.dataset.wm;
+      ov.querySelectorAll("[data-wm]").forEach((x) => x.classList.toggle("on", x === b));
+      renderWizStep();
+    }));
+    $("#wiz-prev").onclick = () => { if (S._wiz.step > 0) { S._wiz.step--; renderWizStep(); } };
+    $("#wiz-next").onclick = () => {
+      if (S._wiz.step < S._wiz.steps.length - 1) { S._wiz.step++; renderWizStep(); }
+      else doExport("#wiz-next");
+    };
+    renderWizStep();
+  }
+
+  function renderWizStep() {
+    const W = S._wiz, P = S.proposal, steps = W.steps, st = steps[W.step];
+    $("#wiz-h").textContent = st.title;
+    $("#wiz-count").textContent = "Etapa " + (W.step + 1) + " de " + steps.length;
+    // stepper
+    $("#wiz-steps").innerHTML = steps.map((s, i) =>
+      '<button class="wstep' + (i === W.step ? " on" : i < W.step ? " done" : "") + '" data-si="' + i + '">' +
+      '<span class="wnum">' + (i < W.step ? I.check : i + 1) + "</span><span class=\"wlbl\">" + esc(s.title) + "</span></button>").join("");
+    $("#wiz-steps").querySelectorAll("[data-si]").forEach((b) => (b.onclick = () => { W.step = +b.dataset.si; renderWizStep(); }));
+    // nav labels
+    $("#wiz-prev").style.visibility = W.step === 0 ? "hidden" : "visible";
+    const last = W.step === steps.length - 1;
+    $("#wiz-next").innerHTML = last ? I.dl + " Confirmar e gerar PDF" : "Próximo " + I.fwd;
+    // body
+    $("#wiz-body").innerHTML = wizStepBody(st);
+    wireWizStep(st);
+  }
+
+  function wizStepBody(st) {
+    const P = S.proposal, ncols = P.columns.length;
+    const center = wizCenter(st);
+    if (st.type === "cover" || st.type === "obs") {
+      return '<div class="wiz-stage solo">' + center +
+        '<div class="wiz-note">' + I.alert + " Este bloco é <b>texto do modelo</b> — não vem dos PDFs. Ajuste o conteúdo padrão em <b>Editar modelo</b>.</div></div>";
+    }
+    // fontes por coluna
+    const sources = P.columns.map((col, ci) => wizSource(st, ci)).join("");
+    if (ncols === 2) {
+      // uma fonte de cada lado, resultado no centro
+      const src = P.columns.map((col, ci) => wizSource(st, ci));
+      return '<div class="wiz-stage trio"><div class="wiz-src-col">' + src[0] + "</div>" +
+        '<div class="wiz-center-col">' + center + "</div>" +
+        '<div class="wiz-src-col">' + src[1] + "</div></div>";
+    }
+    return '<div class="wiz-stage stack"><div class="wiz-center-col">' + center + "</div>" +
+      '<div class="wiz-sources-grid">' + sources + "</div></div>";
+  }
+
+  // centro: resultado final da etapa, editável
+  function wizCenter(st) {
+    const P = S.proposal;
+    if (st.type === "cover") {
+      const cv = coverData();
+      const nome = (P.info.segurado || "Cliente").split(" ")[0];
+      return '<div class="wiz-card"><div class="wc-h">Resultado — capa</div><div class="wc-body">' +
+        '<div class="field"><label>Saudação</label><input class="input" data-cover="greeting" value="' + esc(cv.greeting) + '"></div>' +
+        '<div class="wc-note muted">Prévia: <b>' + esc(cv.greeting.replace("{{primeiro_nome}}", nome)) + "</b></div>" +
+        cv.paragraphs.map((p, i) => '<div class="field mt"><label>Parágrafo ' + (i + 1) + '</label><textarea class="input" rows="2" data-coverp="' + i + '">' + esc(p) + "</textarea></div>").join("") +
+        "</div></div>";
+    }
+    if (st.type === "obs") {
+      return '<div class="wiz-card"><div class="wc-h">Resultado — observações</div><div class="wc-body">' +
+        (P.obs || []).map((o, i) => '<div class="field' + (i ? " mt" : "") + '"><textarea class="input" rows="2" data-obs="' + i + '">' + esc(o) + "</textarea></div>").join("") +
+        "</div></div>";
+    }
+    // info / sec: tabela rótulo × colunas
+    const P2 = S.proposal, ncols = P2.columns.length;
+    const head = '<div class="wt-row wt-head"><div class="wt-lbl"></div>' +
+      P2.columns.map((c, i) => '<div class="wt-col" style="color:' + insurerById(c.insurer_id).color + '">' + (i + 1) + " · " + esc(insurerById(c.insurer_id).name) + "</div>").join("") + "</div>";
+    const rows = st.rows.map((r) => {
+      const cells = P2.columns.map((col, ci) => {
+        const val = st.type === "info" ? P2.info[r.key] : col.fields[r.key];
+        const prov = (col.provenance || {})[r.key];
+        const cls = provClass(prov) || "";
+        const attr = st.type === "info"
+          ? ' data-winfo="' + esc(r.key) + '"'
+          : ' data-wk="' + esc(r.key) + '" data-wc="' + ci + '"';
+        return '<div class="wt-cell"><div class="wcap" contenteditable="true" spellcheck="false"' + attr +
+          ' data-hl="' + esc(r.key) + '_' + ci + '">' + esc(val || "") + "</div>" +
+          (cls ? '<span class="prov-dot ' + cls + '"></span>' : "") + "</div>";
+      }).join("");
+      return '<div class="wt-row"><div class="wt-lbl">' + esc(r.label) + "</div>" + cells + "</div>";
+    }).join("");
+    return '<div class="wiz-card"><div class="wc-h">Resultado no documento final</div>' +
+      '<div class="wtable" style="--wc:' + ncols + '">' + head + rows + "</div></div>";
+  }
+
+  // fonte de uma coluna: página real com marca-texto (ou recortes)
+  function wizSource(st, ci) {
+    const col = S.proposal.columns[ci];
+    const ins = insurerById(col.insurer_id);
+    const keys = st.rows.map((r) => r.key);
+    // reúne destaques desta etapa que têm origem no PDF
+    const hs = [];
+    keys.forEach((k) => {
+      const p = (col.provenance || {})[k];
+      if (p && p.page && p.bbox) hs.push({ key: k, page: p.page, bbox: p.bbox, value: (st.type === "info" ? S.proposal.info[k] : col.fields[k]), method: provClass(p) });
+    });
+    const headh = '<div class="ws-h"><span class="badge-n" style="background:' + ins.color + '">' + (ci + 1) + "</span>" + esc(ins.name) +
+      '<span class="muted"> · ' + (col.profile_used ? "perfil" : "IA") + "</span></div>";
+    if (!hs.length) return '<div class="wiz-src">' + headh + '<div class="ws-empty">' + I.alert + " Sem origem localizada nesta etapa.</div></div>";
+    if (S._wiz.mode === "crop") {
+      const crops = hs.map((h) => wizCrop(col, h)).join("");
+      return '<div class="wiz-src">' + headh + '<div class="ws-crops">' + crops + "</div></div>";
+    }
+    // modo página: agrupa por página
+    const byPage = {};
+    hs.forEach((h) => (byPage[h.page] = byPage[h.page] || []).push(h));
+    const pagesHTML = Object.keys(byPage).map((pn) => wizPage(col, +pn, byPage[pn])).join("");
+    return '<div class="wiz-src">' + headh + '<div class="ws-pages">' + pagesHTML + "</div></div>";
+  }
+
+  function pageMeta(col, pn) { return (col.pages || []).find((x) => x.n === pn); }
+  function imgUrl(col, pn) { return col.doc_id ? API + "/page-image?doc=" + encodeURIComponent(col.doc_id) + "&p=" + pn : null; }
+
+  function wizPage(col, pn, hs) {
+    const meta = pageMeta(col, pn); if (!meta) return "";
+    const W = 340, sc = W / meta.w;
+    const url = imgUrl(col, pn);
+    const bg = url
+      ? '<img class="ws-img" src="' + url + '" alt="p' + pn + '" loading="lazy">'
+      : facsimile(meta, sc); // fallback portátil (sem raster)
+    const marks = hs.map((h) =>
+      '<div class="ws-hl ' + (h.method || "") + '" data-hl="' + esc(h.key) + "_" + hcol(col) + '" style="left:' + (h.bbox[0] * sc).toFixed(1) +
+      "px;top:" + (h.bbox[1] * sc).toFixed(1) + "px;width:" + ((h.bbox[2] - h.bbox[0]) * sc).toFixed(1) +
+      "px;height:" + ((h.bbox[3] - h.bbox[1]) * sc).toFixed(1) + 'px" title="' + esc(h.value || "") + '"></div>').join("");
+    return '<div class="ws-page" style="width:' + W + "px;height:" + (meta.h * sc).toFixed(0) + 'px">' + bg + marks +
+      '<div class="ws-pg-tag">p' + pn + "</div></div>";
+  }
+  function hcol(col) { return S.proposal.columns.indexOf(col); }
+
+  function facsimile(meta, sc) {
+    return (meta.fragments || []).map((f) =>
+      '<div class="ws-frag" style="left:' + (f.bbox[0] * sc).toFixed(1) + "px;top:" + (f.bbox[1] * sc).toFixed(1) +
+      "px;font-size:" + Math.max(4, (f.bbox[3] - f.bbox[1]) * sc * 0.9).toFixed(1) + 'px">' + esc(f.text) + "</div>").join("");
+  }
+
+  function wizCrop(col, h) {
+    const meta = pageMeta(col, h.page); if (!meta) return "";
+    const url = imgUrl(col, h.page);
+    const Wc = 300;
+    const vw = h.bbox[2] - h.bbox[0], vh = h.bbox[3] - h.bbox[1];
+    const padx = Math.max(10, vw * 0.15), pady = Math.max(4, vh * 0.35); // margem folgada horizontal, apertada vertical
+    const bw = vw + padx * 2, bh = vh + pady * 2;
+    const k = Wc / bw; // fator para preencher a largura do recorte
+    const label = fieldLabel(h.key);
+    let media;
+    if (url) {
+      media = '<div class="wc-crop" style="width:' + Wc + "px;height:" + (bh * k).toFixed(0) +
+        "px;background-image:url(" + url + ");background-size:" + (meta.w * k).toFixed(1) +
+        "px auto;background-position:-" + ((h.bbox[0] - padx) * k).toFixed(1) + "px -" + ((h.bbox[1] - pady) * k).toFixed(1) + 'px"></div>';
+    } else {
+      media = '<div class="wc-crop facs" style="width:' + Wc + "px;height:" + Math.max(34, bh * k).toFixed(0) + 'px">' + esc(h.value || "") + "</div>";
+    }
+    return '<div class="ws-crop-item" data-hl="' + esc(h.key) + "_" + hcol(col) + '"><div class="wc-crop-lbl">' + esc(label) +
+      '<span class="muted"> · p' + h.page + "</span></div>" + media + "</div>";
+  }
+
+  function coverData() {
+    if (!S.proposal.coverOverride) S.proposal.coverOverride = clone(tpl().cover);
+    return S.proposal.coverOverride;
+  }
+
+  function wireWizStep(st) {
+    const body = $("#wiz-body");
+    // edição do centro
+    body.querySelectorAll("[contenteditable]").forEach((el) => {
+      el.addEventListener("focus", () => highlightFor(el.dataset.hl, true));
+      el.addEventListener("blur", () => {
+        const v = el.textContent.trim();
+        if (el.dataset.winfo != null) S.proposal.info[el.dataset.winfo] = v;
+        else if (el.dataset.wk != null) S.proposal.columns[+el.dataset.wc].fields[el.dataset.wk] = v;
+        highlightFor(el.dataset.hl, false);
+      });
+      el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); el.blur(); } });
+    });
+    body.querySelectorAll("[data-cover]").forEach((el) => (el.oninput = () => { coverData().greeting = el.value; }));
+    body.querySelectorAll("[data-coverp]").forEach((el) => (el.oninput = () => { coverData().paragraphs[+el.dataset.coverp] = el.value; }));
+    body.querySelectorAll("[data-obs]").forEach((el) => (el.oninput = () => { S.proposal.obs[+el.dataset.obs] = el.value; }));
+    // clique num destaque -> foca a célula correspondente
+    body.querySelectorAll(".ws-hl, .ws-crop-item").forEach((m) => (m.onclick = () => {
+      const cell = body.querySelector('.wcap[data-hl="' + cssEsc(m.dataset.hl) + '"]');
+      if (cell) { cell.focus(); document.getSelection().selectAllChildren(cell); }
+    }));
+  }
+  function cssEsc(s) { return String(s).replace(/"/g, '\\"'); }
+  function highlightFor(hl, on) {
+    if (!hl) return;
+    document.querySelectorAll('.ws-hl[data-hl="' + cssEsc(hl) + '"], .ws-crop-item[data-hl="' + cssEsc(hl) + '"]')
+      .forEach((m) => m.classList.toggle("focused", on));
   }
 
   /* =========================================================================
