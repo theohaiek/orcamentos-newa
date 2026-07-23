@@ -30,6 +30,10 @@
     mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 6 10 7 10-7"/></svg>',
     pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
     web: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20Z"/></svg>',
+    grip: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>',
+    eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+    eyeoff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.7 5.1A9.7 9.7 0 0 1 12 5c6.5 0 10 7 10 7a13.6 13.6 0 0 1-2.2 3M6.6 6.6A13.6 13.6 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 4.3-1M3 3l18 18M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
+    tune: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h11M4 12h7M4 18h14"/><circle cx="18" cy="6" r="2"/><circle cx="14" cy="12" r="2"/><circle cx="20" cy="18" r="2"/></svg>',
   };
   const MARK = '<svg viewBox="0 0 32 32" fill="none"><path d="M4 8 L13 24 L16 18" stroke="#1F9E4A" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 18 L22 8 L28 20" stroke="#12703A" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -80,6 +84,39 @@
     "A COBERTURA DE PROTEÇÃO DE PNEUS SERÁ LIBERADO PARA UM ITEM DURANTE A VIGÊNCIA",
     "O CARRO RESERVA SERA LIBERADO PARA O SEGURADO OU PRINCIPAL CONDUTOR DA APÓLICE APRESENTANDO CNH COM MAIS DE 2 ANOS E CARTÃO DE CRÉDITO",
   ];
+
+  /* ---------------- Modelo do documento (data-driven) ---------------- */
+  function DEFAULT_TPL() {
+    return {
+      title: "PROPOSTA DE SEGURO",
+      subtitle: "NEWA · Corretora de Seguros",
+      cover: {
+        show: true,
+        greeting: "Olá, {{primeiro_nome}}",
+        paragraphs: [
+          "Antes de qualquer coisa, parabéns por esse passo dado junto à NEWA Seguros.",
+          "Aqui, o cuidado com o que é seu começa agora, onde preparamos tudo com atenção aos detalhes.",
+          "A seguir, você encontrará uma proposta personalizada, com tudo o que você precisa saber para escolher com confiança a melhor proteção.",
+        ],
+        showMural: true,
+        muralLabel: "Trabalhamos com as principais seguradoras do país",
+        showContact: true,
+      },
+      infoTitle: "Informações do Veículo e Condutor",
+      info: INFO.map(([key, label, req]) => ({ key, label, show: true, req: !!req })),
+      sections: [
+        { id: "cob", title: "Coberturas", show: true, rows: COBERTURAS.map(([key, label]) => ({ key, label, show: true })) },
+        { id: "fra", title: "Franquias e Assistências", show: true, rows: FRANQUIAS.map(([key, label]) => ({ key, label, show: true })) },
+        { id: "pag", title: "Formas de Pagamento", show: true, rows: PAGAMENTO.map(([key, label]) => ({ key, label, show: true })) },
+      ],
+      obs: { show: true, title: "Observações", items: OBS_DEFAULT.slice() },
+    };
+  }
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const tpl = () => (S.template && S.template.sections ? S.template : DEFAULT_TPL());
+  const visInfo = () => tpl().info.filter((r) => r.show);
+  const dataKeys = (inclOptional) => tpl().sections.filter((s) => s.show)
+    .flatMap((s) => s.rows.filter((r) => r.show && (inclOptional || !r.optional)).map((r) => r.key));
 
   /* ---------------- Utils ---------------- */
   const $ = (s, r = document) => r.querySelector(s);
@@ -162,6 +199,8 @@
     const [ins, cfg] = await Promise.all([api("/insurers"), api("/config")]);
     S.insurers = ins.insurers || ins;
     S.config = cfg;
+    try { const tp = await api("/template"); S.template = tp && tp.sections ? tp : null; }
+    catch (e) { S.template = null; }
   }
 
   /* =========================================================================
@@ -204,6 +243,7 @@
      ========================================================================= */
   const NAV = [
     ["nova", "Nova Proposta", I.doc],
+    ["modelo", "Editar modelo", I.tune, true],
     ["modelos", "Modelos de Entrada", I.layers],
     ["usuarios", "Usuários", I.users, true],
     ["config", "Configurações", I.cog, true],
@@ -232,7 +272,7 @@
   function go(view) {
     S.view = view;
     document.querySelectorAll(".nav a").forEach((a) => a.classList.toggle("active", a.dataset.view === view));
-    ({ nova: viewNova, modelos: viewModelos, usuarios: viewUsuarios, config: viewConfig }[view] || viewNova)();
+    ({ nova: viewNova, modelo: viewEditarModelo, modelos: viewModelos, usuarios: viewUsuarios, config: viewConfig }[view] || viewNova)();
   }
   function shell(crumb, title, actionsHTML = "") {
     return (
@@ -349,8 +389,8 @@
     }
     // monta a proposta: info compartilhada vem da 1ª coluna
     const info = {};
-    INFO.forEach(([k]) => (info[k] = columns[0].fields[k] || ""));
-    S.proposal = { info, columns, obs: OBS_DEFAULT.slice(), errors };
+    tpl().info.forEach((r) => (info[r.key] = columns[0].fields[r.key] || ""));
+    S.proposal = { info, columns, errors, obs: clone(tpl().obs.items) };
     if (errors.length) toast(errors.length + " arquivo(s) falharam e foram ignorados.", "err");
     renderReview();
   }
@@ -360,8 +400,9 @@
      ========================================================================= */
   function pending() {
     const P = S.proposal; let n = 0;
-    INFO.forEach(([k, , req]) => { if (req && !String(P.info[k] || "").trim()) n++; });
-    P.columns.forEach((col) => COL_KEYS.forEach((k) => { if (!String(col.fields[k] || "").trim()) n++; }));
+    tpl().info.forEach((r) => { if (r.show && r.req && !String(P.info[r.key] || "").trim()) n++; });
+    const keys = dataKeys(false);
+    P.columns.forEach((col) => keys.forEach((k) => { if (!String(col.fields[k] || "").trim()) n++; }));
     return n;
   }
 
@@ -395,14 +436,20 @@
     const exp = $("#expbtn"); if (exp) exp.disabled = n > 0;
   }
 
-  /* constrói o HTML do documento (2 páginas). editable=true -> cápsulas editáveis */
-  function buildDoc(P, editable) {
+  /* Realça tokens {{...}} para leitura no editor/preview */
+  const mark = (txt) => esc(txt).replace(/\{\{([^}]+)\}\}/g, '<span class="ph-token">{{$1}}</span>');
+
+  /* constrói o HTML do documento (2 páginas).
+     editable=true -> cápsulas editáveis (revisão) ; ph=true -> modo placeholder (editor) */
+  function buildDoc(P, editable, ph, tOverride) {
+    const T = tOverride || tpl();
     const cols = P.columns;
     const ncols = cols.length;
     const cfg = S.config.corretora || {};
     const labelw = ncols >= 3 ? "240px" : "300px";
 
-    const cap = (val, kk, ci) => {
+    const cap = (val, kk, ci, lbl) => {
+      if (ph) return '<div class="cap ph">{{' + esc(lbl) + "}}</div>";
       const empty = !String(val || "").trim();
       const yes = /^sim$/i.test(String(val || "").trim());
       const na = /não contratado|nao contratado/i.test(String(val || ""));
@@ -410,12 +457,14 @@
       const attrs = editable ? ' contenteditable="true" data-k="' + kk + '" data-c="' + ci + '" spellcheck="false"' : "";
       return '<div class="' + cls + '"' + attrs + ">" + esc(empty ? (editable ? "" : "—") : val) + "</div>";
     };
-    const infoCap = (k) => {
-      const v = P.info[k], empty = !String(v || "").trim();
-      const attrs = editable ? ' contenteditable="true" data-info="' + k + '" spellcheck="false"' : "";
+    const infoCap = (r) => {
+      if (ph) return '<div class="cap ph">{{' + esc(r.label) + "}}</div>";
+      const v = P.info[r.key], empty = !String(v || "").trim();
+      const attrs = editable ? ' contenteditable="true" data-info="' + r.key + '" spellcheck="false"' : "";
       return '<div class="cap' + (empty ? " empty" : "") + '"' + attrs + ">" + esc(empty ? "" : v) + "</div>";
     };
     const colHead = (col, i) => {
+      if (ph) return '<div class="col-head" style="background:var(--green-700);color:#fff"><span class="badge" style="background:rgba(255,255,255,.28)">' + (i + 1) + '</span><span class="nm">{{Seguradora ' + (i + 1) + "}}</span></div>";
       const ins = insurerById(col.insurer_id);
       const fg = ins.text === "dark" ? "#141414" : "#fff";
       const inner = ins.logo_small
@@ -429,62 +478,71 @@
       '<div class="sec-bar with-cols" style="--ncols:' + ncols + ";--labelw:" + labelw + '">' +
       '<div class="sec-title">' + esc(title) + "</div>" +
       cols.map((col, i) => colHead(col, i)).join("") + "</div>";
-    const dataRows = (defs) =>
+    const dataRows = (rows) =>
       '<div class="rows" style="--ncols:' + ncols + ";--labelw:" + labelw + '">' +
-      defs.map(([k, lbl]) =>
-        '<div class="datarow"><div class="lbl">' + esc(lbl) + "</div>" +
-        cols.map((col, i) => cap(col.fields[k], k, i)).join("") + "</div>").join("") +
+      rows.map((r) =>
+        '<div class="datarow"><div class="lbl">' + esc(r.label) + "</div>" +
+        cols.map((col, i) => cap(col.fields[r.key], r.key, i, r.label)).join("") + "</div>").join("") +
       "</div>";
 
     /* ---- CAPA ---- */
-    const nome = (P.info.segurado || "Cliente").split(" ")[0];
+    const nome = ph ? "{{primeiro nome}}" : (P.info.segurado || "Cliente").split(" ")[0];
+    const nameHTML = ph ? '<span class="ph-token">{{primeiro nome}}</span>' : "<b>" + esc(nome) + "</b>";
+    let greeting = esc(T.cover.greeting || "Olá, {{primeiro_nome}}").replace("{{primeiro_nome}}", nameHTML);
+    greeting = greeting.replace(/\{\{([^}]+)\}\}/g, '<span class="ph-token">{{$1}}</span>');
     const strip = S.insurers.filter((x) => x.id !== "generico")
       .map((x) => x.logo
         ? '<div class="ins-logo"><img src="' + esc(x.logo) + '" alt="' + esc(x.name) + '"></div>'
         : '<span class="ins-txt">' + esc(x.name) + "</span>").join("");
-    const cover =
-      '<div class="doc-page cover" data-page="1"><div class="topgrad"></div><div class="safe">' +
-      '<div class="logo"><img class="logo-img" src="' + LOGO + '" alt="NEWA Seguros"></div>' +
-      '<div class="hero-mark">' + MARK + "</div>" +
-      '<div class="hello"><h1>Olá, <b>' + esc(nome) + "</b></h1></div>" +
-      '<div class="letter"><p>Antes de qualquer coisa, parabéns por esse passo dado junto à <b>NEWA Seguros</b>.</p>' +
-      "<p>Aqui, o cuidado com o que é seu começa agora, onde preparamos tudo com atenção aos detalhes.</p>" +
-      "<p>A seguir, você encontrará uma proposta personalizada, com tudo o que você precisa saber para escolher com confiança a melhor proteção.</p></div>" +
-      '<div class="spacer"></div>' +
-      '<div class="strip-label">Trabalhamos com as principais seguradoras do país</div>' +
-      '<div class="insurers-strip">' + strip + "</div>" +
-      '<div class="contact">' +
-      '<div class="blk"><h4>Atendimento</h4>' +
-      '<div class="rowc">' + I.web + "<span>" + esc(cfg.site || "newaseguros.com.br") + "</span></div>" +
-      '<div class="rowc">' + I.mail + "<span>" + esc(cfg.email || "newaseguros@newaseguros.com.br") + "</span></div>" +
-      '<div class="rowc">' + I.pin + "<span>" + esc(cfg.endereco || "—") + "</span></div></div>" +
-      '<div class="blk"><h4>Contato</h4>' +
-      '<div class="rowc">' + I.phone + "<span>" + esc(cfg.telefone || "(11) 4040-3665") + "</span></div>" +
-      (cfg.whatsapp ? '<div class="rowc">' + I.phone + "<span>" + esc(cfg.whatsapp) + "</span></div>" : "") +
-      "</div></div></div></div>";
+    let cover = "";
+    if (T.cover.show) {
+      cover =
+        '<div class="doc-page cover" data-page="1"><div class="topgrad"></div><div class="safe">' +
+        '<div class="logo"><img class="logo-img" src="' + LOGO + '" alt="NEWA Seguros"></div>' +
+        '<div class="hero-mark">' + MARK + "</div>" +
+        '<div class="hello"><h1>' + greeting + "</h1></div>" +
+        '<div class="letter">' + T.cover.paragraphs.map((p) => "<p>" + mark(p) + "</p>").join("") + "</div>" +
+        '<div class="spacer"></div>' +
+        (T.cover.showMural ? '<div class="strip-label">' + esc(T.cover.muralLabel || "") + "</div>" + '<div class="insurers-strip">' + strip + "</div>" : "") +
+        (T.cover.showContact
+          ? '<div class="contact">' +
+            '<div class="blk"><h4>Atendimento</h4>' +
+            '<div class="rowc">' + I.web + "<span>" + esc(cfg.site || "newaseguros.com.br") + "</span></div>" +
+            '<div class="rowc">' + I.mail + "<span>" + esc(cfg.email || "newaseguros@newaseguros.com.br") + "</span></div>" +
+            '<div class="rowc">' + I.pin + "<span>" + esc(cfg.endereco || "—") + "</span></div></div>" +
+            '<div class="blk"><h4>Contato</h4>' +
+            '<div class="rowc">' + I.phone + "<span>" + esc(cfg.telefone || "(11) 4040-3665") + "</span></div>" +
+            (cfg.whatsapp ? '<div class="rowc">' + I.phone + "<span>" + esc(cfg.whatsapp) + "</span></div>" : "") +
+            "</div></div>"
+          : "") +
+        "</div></div>";
+    }
 
     /* ---- COMPARATIVO ---- */
-    const inforow = ([k, lbl]) => '<div class="inforow"><div class="lbl">' + esc(lbl) + ":</div>" + infoCap(k) + "</div>";
-    const infoFull = INFO.slice(0, 4);   // segurado, veiculo, ano_modelo, principal_condutor
-    const infoPairs = INFO.slice(4);     // data, validade, uso, fipe, condutores, cep
+    const inforow = (r) => '<div class="inforow"><div class="lbl">' + esc(r.label) + ":</div>" + infoCap(r) + "</div>";
+    const infoRows = T.info.filter((r) => r.show);
+    const infoFull = infoRows.slice(0, 4);
+    const infoPairs = infoRows.slice(4);
     let pairsHTML = "";
     for (let i = 0; i < infoPairs.length; i += 2)
       pairsHTML += '<div class="infopair">' + inforow(infoPairs[i]) + (infoPairs[i + 1] ? inforow(infoPairs[i + 1]) : "") + "</div>";
     const infoGrid = '<div class="rows infoblock">' + infoFull.map(inforow).join("") + pairsHTML + "</div>";
-    const obs =
-      '<div class="obs"><div class="obs-t">Observações</div><ul' + (editable ? ' contenteditable="true" data-obs="1"' : "") + ">" +
-      P.obs.map((o) => "<li>" + esc(o) + "</li>").join("") + "</ul></div>";
+    const sectionsHTML = T.sections.filter((s) => s.show)
+      .map((s) => secBar(s.title) + dataRows(s.rows.filter((r) => r.show))).join("");
+    const obsItems = (P && P.obs) ? P.obs : T.obs.items;
+    const obs = T.obs.show
+      ? '<div class="obs"><div class="obs-t">' + esc(T.obs.title || "Observações") + "</div><ul" + (editable && !ph ? ' contenteditable="true" data-obs="1"' : "") + ">" +
+        obsItems.map((o) => "<li>" + mark(o) + "</li>").join("") + "</ul></div>"
+      : "";
     const compare =
       '<div class="doc-page compare" data-page="2"><div class="topgrad"></div>' +
-      '<div class="head"><img class="logo-img" src="' + LOGO + '" alt="NEWA"><div class="tt"><small>NEWA · Corretora de Seguros</small><h1>PROPOSTA DE SEGURO</h1></div></div>' +
-      '<div class="sec-bar"><div class="sec-title">Informações do Veículo e Condutor</div></div>' +
+      '<div class="head"><img class="logo-img" src="' + LOGO + '" alt="NEWA"><div class="tt"><small>' + esc(T.subtitle || "") + "</small><h1>" + esc(T.title || "") + "</h1></div></div>" +
+      '<div class="sec-bar"><div class="sec-title">' + esc(T.infoTitle || "") + "</div></div>" +
       infoGrid +
-      secBar("Coberturas") + dataRows(COBERTURAS) +
-      secBar("Franquias e Assistências") + dataRows(FRANQUIAS) +
-      secBar("Formas de Pagamento") + dataRows(PAGAMENTO) +
+      sectionsHTML +
       obs +
-      '<div class="compare-foot docfoot"><span>NEWA Seguros</span><div class="g"></div><span>Proposta gerada em ' +
-      new Date().toLocaleDateString("pt-BR") + "</span></div></div>";
+      '<div class="compare-foot docfoot"><span>NEWA Seguros</span><div class="g"></div><span>' +
+      (ph ? "Proposta gerada em {{data}}" : "Proposta gerada em " + new Date().toLocaleDateString("pt-BR")) + "</span></div></div>";
 
     return cover + compare;
   }
@@ -514,8 +572,8 @@
     }
   }
   function fillEmpties() {
-    const P = S.proposal;
-    P.columns.forEach((col) => COL_KEYS.forEach((k) => { if (!String(col.fields[k] || "").trim()) col.fields[k] = "Não Contratado"; }));
+    const P = S.proposal; const keys = dataKeys(true);
+    P.columns.forEach((col) => keys.forEach((k) => { if (!String(col.fields[k] || "").trim()) col.fields[k] = "Não Contratado"; }));
     renderReview();
     toast("Campos vazios preenchidos com “Não Contratado”.", "ok");
   }
@@ -674,6 +732,206 @@
       bodyHTML: "<p>Remover o acesso de <b>" + esc(username) + "</b>?</p>",
       onOk: async () => { await api("/users/" + encodeURIComponent(username), { method: "DELETE" }); await refreshUsers(); toast("Usuário removido.", "ok"); },
     });
+  }
+
+  /* =========================================================================
+     VIEW: EDITAR MODELO (editor do documento — admin)
+     ========================================================================= */
+  let E = null; // cópia de trabalho do modelo
+
+  function viewEditarModelo() {
+    E = clone(tpl());
+    root().innerHTML = shell("Editar modelo", "Editar modelo do PDF",
+      '<button class="btn ghost" id="tplreset">Restaurar padrão</button>' +
+      '<button class="btn" id="tplsave">' + I.check + " Salvar modelo</button>");
+    const c = $("#view-content");
+    c.innerHTML =
+      '<p class="muted" style="max-width:900px;margin-bottom:16px">Arraste pelo <b>⋮⋮</b> para reordenar, clique no olho para mostrar/ocultar, edite os textos e adicione novos campos. Os valores aparecem como <span class="ph-token">{{placeholder}}</span> — na proposta real eles são preenchidos automaticamente.</p>' +
+      '<div class="editor"><div class="editor-controls" id="ectrl"></div>' +
+      '<div class="editor-preview"><div class="ep-head">Pré-visualização</div><div class="ep-scroll" id="eprev"></div></div></div>';
+    $("#tplsave").onclick = saveTemplate;
+    $("#tplreset").onclick = () => modal({
+      title: "Restaurar modelo padrão", danger: true, okText: "Restaurar",
+      bodyHTML: "<p>Isto descarta suas personalizações e volta ao modelo original. Continuar?</p>",
+      onOk: async () => { E = DEFAULT_TPL(); rc(); rp(); toast("Modelo restaurado (lembre de salvar).", "ok"); },
+    });
+    rc(); rp();
+  }
+
+  function rp() { // render preview
+    const prev = $("#eprev"); if (!prev) return;
+    const fakeP = { info: {}, columns: [{ insurer_id: "generico", fields: {} }, { insurer_id: "generico", fields: {} }] };
+    prev.innerHTML = '<div class="orca-doc">' + buildDoc(fakeP, false, true, E) + "</div>";
+  }
+
+  /* ---- construtores de UI do editor ---- */
+  function ec_toggle(on, attrs) { return '<button class="etog' + (on ? " on" : "") + '" ' + attrs + ' title="Mostrar/ocultar">' + (on ? I.eye : I.eyeoff) + "</button>"; }
+  const grip = '<span class="grip" title="Arraste para reordenar">' + I.grip + "</span>";
+
+  function rc() { // render controls
+    const ctrl = $("#ectrl"); if (!ctrl) return;
+    const card = (title, inner, extra) => '<div class="ecard"><div class="ecard-h"><h3>' + esc(title) + "</h3>" + (extra || "") + "</div>" + inner + "</div>";
+
+    // CAPA
+    const paras = E.cover.paragraphs.map((p, i) =>
+      '<div class="erow" data-idx="' + i + '" data-list="para">' + grip +
+      '<textarea class="input erow-in" data-bind="para" data-i="' + i + '" rows="2">' + esc(p) + "</textarea>" +
+      '<button class="btn icon ghost edel" data-del="para" data-i="' + i + '">' + I.trash + "</button></div>").join("");
+    const capa = card("Capa",
+      '<label class="echk"><input type="checkbox" data-bind="cover.show"' + (E.cover.show ? " checked" : "") + "> Mostrar capa</label>" +
+      '<div class="field mt"><label>Saudação <span class="muted">(use {{primeiro_nome}})</span></label><input class="input" data-bind="cover.greeting" value="' + esc(E.cover.greeting) + '"></div>' +
+      '<div class="elabel mt">Parágrafos</div><div class="elist" data-listwrap="para">' + paras + "</div>" +
+      '<button class="btn secondary sm" data-add="para">' + I.plus + " Adicionar parágrafo</button>" +
+      '<label class="echk mt"><input type="checkbox" data-bind="cover.showMural"' + (E.cover.showMural ? " checked" : "") + "> Mostrar mural de seguradoras</label>" +
+      '<div class="field mt"><label>Texto acima do mural</label><input class="input" data-bind="cover.muralLabel" value="' + esc(E.cover.muralLabel) + '"></div>' +
+      '<label class="echk mt"><input type="checkbox" data-bind="cover.showContact"' + (E.cover.showContact ? " checked" : "") + "> Mostrar bloco de contato</label>");
+
+    // TÍTULO
+    const titulo = card("Cabeçalho da 2ª página",
+      '<div class="field"><label>Subtítulo</label><input class="input" data-bind="subtitle" value="' + esc(E.subtitle) + '"></div>' +
+      '<div class="field mt"><label>Título</label><input class="input" data-bind="title" value="' + esc(E.title) + '"></div>');
+
+    // INFORMAÇÕES
+    const inforows = E.info.map((r, i) =>
+      '<div class="erow" data-idx="' + i + '" data-list="info">' + grip +
+      '<input class="input erow-in" data-bind="info.label" data-i="' + i + '" value="' + esc(r.label) + '">' +
+      ec_toggle(r.show, 'data-tog="info" data-i="' + i + '"') +
+      (r.custom ? '<button class="btn icon ghost edel" data-del="info" data-i="' + i + '">' + I.trash + "</button>" : "") + "</div>").join("");
+    const info = card("Informações do veículo e condutor",
+      '<div class="field"><label>Título da faixa</label><input class="input" data-bind="infoTitle" value="' + esc(E.infoTitle) + '"></div>' +
+      '<div class="elist mt" data-listwrap="info">' + inforows + "</div>" +
+      '<button class="btn secondary sm" data-add="info">' + I.plus + " Adicionar campo</button>");
+
+    // SEÇÕES (dados)
+    const secs = E.sections.map((s, si) => {
+      const rows = s.rows.map((r, ri) =>
+        '<div class="erow" data-idx="' + ri + '" data-list="secrow" data-s="' + si + '">' + grip +
+        '<input class="input erow-in" data-bind="secrow.label" data-s="' + si + '" data-i="' + ri + '" value="' + esc(r.label) + '">' +
+        ec_toggle(r.show, 'data-tog="secrow" data-s="' + si + '" data-i="' + ri + '"') +
+        '<button class="btn icon ghost edel" data-del="secrow" data-s="' + si + '" data-i="' + ri + '">' + I.trash + "</button></div>").join("");
+      return '<div class="esec" data-idx="' + si + '" data-list="sec"><div class="esec-h">' + grip +
+        '<input class="input erow-in strong" data-bind="sec.title" data-s="' + si + '" value="' + esc(s.title) + '">' +
+        ec_toggle(s.show, 'data-tog="sec" data-s="' + si + '"') +
+        '<button class="btn icon ghost edel" data-del="sec" data-s="' + si + '">' + I.trash + "</button></div>" +
+        '<div class="elist" data-listwrap="secrow" data-s="' + si + '">' + rows + "</div>" +
+        '<button class="btn secondary sm" data-add="secrow" data-s="' + si + '">' + I.plus + " Adicionar linha</button></div>";
+    }).join("");
+    const sections = card("Seções comparativas",
+      '<div class="elist" data-listwrap="sec">' + secs + "</div>" +
+      '<button class="btn secondary sm" data-add="sec">' + I.plus + " Adicionar seção</button>");
+
+    // OBSERVAÇÕES
+    const obsrows = E.obs.items.map((o, i) =>
+      '<div class="erow" data-idx="' + i + '" data-list="obs">' + grip +
+      '<textarea class="input erow-in" data-bind="obs" data-i="' + i + '" rows="2">' + esc(o) + "</textarea>" +
+      '<button class="btn icon ghost edel" data-del="obs" data-i="' + i + '">' + I.trash + "</button></div>").join("");
+    const obs = card("Observações",
+      '<label class="echk"><input type="checkbox" data-bind="obs.show"' + (E.obs.show ? " checked" : "") + "> Mostrar observações</label>" +
+      '<div class="field mt"><label>Título</label><input class="input" data-bind="obs.title" value="' + esc(E.obs.title) + '"></div>' +
+      '<div class="elist mt" data-listwrap="obs">' + obsrows + "</div>" +
+      '<button class="btn secondary sm" data-add="obs">' + I.plus + " Adicionar observação</button>");
+
+    ctrl.innerHTML = capa + titulo + info + sections + obs;
+    wireControls();
+  }
+
+  function wireControls() {
+    const ctrl = $("#ectrl");
+    // inputs de texto (atualizam E + preview, sem re-render dos controles)
+    ctrl.querySelectorAll("[data-bind]").forEach((el) => {
+      const bind = el.dataset.bind;
+      const handler = () => {
+        const v = el.type === "checkbox" ? el.checked : el.value;
+        applyBind(bind, el, v);
+        if (el.type === "checkbox") { rc(); rp(); } else { rp(); }
+      };
+      el.addEventListener(el.type === "checkbox" ? "change" : "input", handler);
+    });
+    // toggles de visibilidade
+    ctrl.querySelectorAll("[data-tog]").forEach((b) => (b.onclick = () => {
+      const t = b.dataset.tog, i = +b.dataset.i, s = +b.dataset.s;
+      if (t === "info") E.info[i].show = !E.info[i].show;
+      else if (t === "sec") E.sections[s].show = !E.sections[s].show;
+      else if (t === "secrow") E.sections[s].rows[i].show = !E.sections[s].rows[i].show;
+      rc(); rp();
+    }));
+    // deletar
+    ctrl.querySelectorAll("[data-del]").forEach((b) => (b.onclick = () => {
+      const t = b.dataset.del, i = +b.dataset.i, s = +b.dataset.s;
+      if (t === "para") E.cover.paragraphs.splice(i, 1);
+      else if (t === "info") E.info.splice(i, 1);
+      else if (t === "obs") E.obs.items.splice(i, 1);
+      else if (t === "sec") E.sections.splice(s, 1);
+      else if (t === "secrow") E.sections[s].rows.splice(i, 1);
+      rc(); rp();
+    }));
+    // adicionar
+    ctrl.querySelectorAll("[data-add]").forEach((b) => (b.onclick = () => {
+      const t = b.dataset.add, s = +b.dataset.s;
+      if (t === "para") E.cover.paragraphs.push("Novo parágrafo.");
+      else if (t === "info") E.info.push({ key: "custom_" + Date.now(), label: "Novo campo", show: true, req: false, custom: true, optional: true });
+      else if (t === "obs") E.obs.items.push("Nova observação.");
+      else if (t === "sec") E.sections.push({ id: "sec_" + Date.now(), title: "Nova seção", show: true, rows: [{ key: "custom_" + Date.now(), label: "Nova linha", show: true, custom: true, optional: true }] });
+      else if (t === "secrow") E.sections[s].rows.push({ key: "custom_" + Date.now(), label: "Nova linha", show: true, custom: true, optional: true });
+      rc(); rp();
+    }));
+    // sortables
+    ctrl.querySelectorAll('[data-listwrap="para"]').forEach((el) => makeSortable(el, E.cover.paragraphs, () => { rc(); rp(); }));
+    ctrl.querySelectorAll('[data-listwrap="info"]').forEach((el) => makeSortable(el, E.info, () => { rc(); rp(); }));
+    ctrl.querySelectorAll('[data-listwrap="obs"]').forEach((el) => makeSortable(el, E.obs.items, () => { rc(); rp(); }));
+    ctrl.querySelectorAll('[data-listwrap="sec"]').forEach((el) => makeSortable(el, E.sections, () => { rc(); rp(); }));
+    ctrl.querySelectorAll('[data-listwrap="secrow"]').forEach((el) => makeSortable(el, E.sections[+el.dataset.s].rows, () => { rc(); rp(); }));
+  }
+
+  function applyBind(bind, el, v) {
+    const i = +el.dataset.i, s = +el.dataset.s;
+    switch (bind) {
+      case "title": E.title = v; break;
+      case "subtitle": E.subtitle = v; break;
+      case "infoTitle": E.infoTitle = v; break;
+      case "cover.show": E.cover.show = v; break;
+      case "cover.greeting": E.cover.greeting = v; break;
+      case "cover.showMural": E.cover.showMural = v; break;
+      case "cover.muralLabel": E.cover.muralLabel = v; break;
+      case "cover.showContact": E.cover.showContact = v; break;
+      case "para": E.cover.paragraphs[i] = v; break;
+      case "info.label": E.info[i].label = v; break;
+      case "obs.show": E.obs.show = v; break;
+      case "obs.title": E.obs.title = v; break;
+      case "obs": E.obs.items[i] = v; break;
+      case "sec.title": E.sections[s].title = v; break;
+      case "secrow.label": E.sections[s].rows[i].label = v; break;
+    }
+  }
+
+  function makeSortable(listEl, arr, done) {
+    let from = null;
+    listEl.querySelectorAll(":scope > [data-idx]").forEach((row) => {
+      const h = row.querySelector(":scope > .grip") || row.querySelector(".esec-h > .grip") || row.querySelector(".grip");
+      if (h) {
+        h.setAttribute("draggable", "true");
+        h.addEventListener("dragstart", (e) => { e.stopPropagation(); from = +row.dataset.idx; row.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text", ""); });
+        h.addEventListener("dragend", () => { row.classList.remove("dragging"); listEl.querySelectorAll(".dragover").forEach((x) => x.classList.remove("dragover")); });
+      }
+      row.addEventListener("dragover", (e) => { e.preventDefault(); e.stopPropagation(); row.classList.add("dragover"); });
+      row.addEventListener("dragleave", () => row.classList.remove("dragover"));
+      row.addEventListener("drop", (e) => {
+        e.preventDefault(); e.stopPropagation(); row.classList.remove("dragover");
+        const to = +row.dataset.idx;
+        if (from != null && from !== to) { const m = arr.splice(from, 1)[0]; arr.splice(to, 0, m); done(); }
+        from = null;
+      });
+    });
+  }
+
+  async function saveTemplate() {
+    const btn = $("#tplsave"); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Salvando…';
+    try {
+      await api("/template", { method: "POST", body: { template: E } });
+      S.template = clone(E);
+      toast("Modelo salvo. As próximas propostas usarão este layout.", "ok");
+    } catch (e) { toast("Falha ao salvar: " + (e.message || e), "err"); }
+    finally { btn.disabled = false; btn.innerHTML = I.check + " Salvar modelo"; }
   }
 
   /* =========================================================================

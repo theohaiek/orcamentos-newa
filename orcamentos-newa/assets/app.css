@@ -87,6 +87,10 @@ a { color: var(--green-700); text-decoration: none; }
   transition-duration: .18s; transition-timing-function: cubic-bezier(.2,0,0,1);
   user-select: none;
 }
+.btn svg { width: 18px; height: 18px; flex: none; }
+.btn.lg svg { width: 20px; height: 20px; }
+.btn.sm svg { width: 15px; height: 15px; }
+.btn.icon svg { width: 20px; height: 20px; }
 .btn:hover { box-shadow: var(--sh-2); }
 .btn:active { transform: scale(.96); }
 .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
@@ -282,6 +286,56 @@ textarea.input { padding: 12px 14px; min-height: 84px; line-height: 1.5; resize:
 .modal .head h3 { font-size: 18px; }
 .modal .body { padding: 14px 22px; display: flex; flex-direction: column; gap: 14px; }
 .modal .foot { padding: 14px 22px 20px; display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ---------- Editor de modelo ---------- */
+.editor { display: grid; grid-template-columns: minmax(360px, 460px) 1fr; gap: 22px; align-items: start; }
+.editor-controls { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.ecard { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--sh-2); padding: 16px 16px 18px; }
+.ecard-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.ecard-h h3 { font-size: 15.5px; }
+.elabel { font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-bottom: 8px; }
+.mt { margin-top: 12px; }
+.btn.sm { min-height: 36px; padding: 0 12px; font-size: 13px; margin-top: 10px; align-self: flex-start; }
+.echk { display: flex; align-items: center; gap: 9px; font-weight: 550; font-size: 14px; cursor: pointer; user-select: none; }
+.echk input { width: 17px; height: 17px; accent-color: var(--green-600); }
+
+.elist { display: flex; flex-direction: column; gap: 8px; }
+.erow { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: var(--r-sm); box-shadow: inset 0 0 0 1px var(--line); padding: 6px 8px;
+  transition-property: box-shadow, transform, opacity; transition-duration: .15s; }
+.erow.dragover { box-shadow: inset 0 0 0 2px var(--green-500); }
+.erow.dragging { opacity: .5; }
+.erow-in { flex: 1; min-height: 38px; box-shadow: none !important; background: transparent; padding: 6px 6px; min-width: 0; }
+.erow-in.strong { font-weight: 650; }
+textarea.erow-in { resize: vertical; line-height: 1.4; }
+.grip { display: grid; place-items: center; width: 26px; height: 32px; color: var(--ink-3); cursor: grab; flex: none; border-radius: 6px; }
+.grip:hover { color: var(--green-700); background: var(--green-50); }
+.grip:active { cursor: grabbing; }
+.grip svg { width: 16px; height: 16px; }
+.edel { width: 34px; height: 34px; flex: none; color: var(--ink-3); }
+.edel:hover { color: var(--err); }
+
+.etog { width: 34px; height: 34px; flex: none; border: none; background: transparent; border-radius: 8px; color: var(--ink-3); cursor: pointer; display: grid; place-items: center;
+  transition-property: color, background-color; transition-duration: .15s; }
+.etog svg { width: 18px; height: 18px; }
+.etog.on { color: var(--green-600); }
+.etog:hover { background: var(--green-50); }
+
+.esec { background: var(--green-50); border-radius: var(--r-md); padding: 10px; box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: 8px; }
+.esec.dragover { box-shadow: inset 0 0 0 2px var(--green-500); }
+.esec.dragging { opacity: .5; }
+.esec-h { display: flex; align-items: center; gap: 8px; }
+.esec .elist { margin-left: 6px; }
+
+.editor-preview { position: sticky; top: 16px; background: var(--card); border-radius: var(--r-lg); box-shadow: var(--sh-2); overflow: hidden; }
+.ep-head { padding: 12px 18px; font-weight: 600; font-size: 13px; color: var(--ink-2); box-shadow: inset 0 -1px 0 var(--line); background: #fff; }
+.ep-scroll { max-height: calc(100vh - 120px); overflow: auto; padding: 20px; background: #EEF2F0; }
+.ep-scroll .orca-doc { zoom: .62; gap: 18px; }
+
+@media (max-width: 1200px) {
+  .editor { grid-template-columns: 1fr; }
+  .editor-preview { position: static; }
+  .ep-scroll { max-height: 640px; }
+}
 
 /* stagger de entrada de conteúdo */
 .stagger > * { opacity: 0; animation: rise .42s cubic-bezier(.2,0,0,1) forwards; }

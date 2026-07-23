@@ -94,6 +94,8 @@
 .cap.na { color: #9aa39d; font-weight: 500; box-shadow: inset 0 0 0 1.4px #E6EAE7; }
 .cap.yes { color: var(--green-800); box-shadow: inset 0 0 0 1.4px #BFE6CD; background: var(--green-50); }
 .cap.empty { color: var(--err); box-shadow: inset 0 0 0 1.4px #F0BcBc; background: var(--err-bg); }
+.cap.ph { color: #6B8F79; font-weight: 600; box-shadow: inset 0 0 0 1.4px #CDE3D6; background: #F3FAF5; font-style: normal; }
+.ph-token { color: #2E8B57; background: #E7F5EC; border-radius: 5px; padding: 0 4px; font-weight: 600; box-decoration-break: clone; }
 
 /* observações */
 .obs { margin: 20px 44px 0; background: #F6F8F7; border-radius: var(--r-md); overflow: hidden; box-shadow: inset 0 0 0 1px var(--line); }
