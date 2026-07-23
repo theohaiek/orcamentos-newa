@@ -374,6 +374,10 @@ textarea.input { padding: 12px 14px; min-height: 84px; line-height: 1.5; resize:
 .wstep.on { background: var(--green-700); color: #fff; box-shadow: none; }
 .wstep.on .wnum { background: rgba(255,255,255,.25); color: #fff; }
 .wstep.done .wnum { background: var(--green-100); color: var(--green-700); }
+.wstep.pend { box-shadow: inset 0 0 0 1.5px #F3C9C9; color: #9A2020; }
+.wstep.pend .wnum { background: var(--err); color: #fff; }
+.wstep.pend.on { background: var(--err); color: #fff; box-shadow: none; }
+.wstep.pend.on .wnum { background: rgba(255,255,255,.28); }
 
 .wiz-body { flex: 1; overflow: auto; padding: 20px 22px; background: #EEF2F0; }
 .wiz-stage.trio { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 16px; align-items: start; }
@@ -397,6 +401,8 @@ textarea.input { padding: 12px 14px; min-height: 84px; line-height: 1.5; resize:
 .wcap { text-align: center; font-size: 12.5px; font-weight: 600; padding: 8px 10px; border-radius: 999px; box-shadow: inset 0 0 0 1.4px var(--line-2); background: #fff; font-variant-numeric: tabular-nums; cursor: text; outline: none; transition-property: box-shadow, background-color; transition-duration: .15s; }
 .wcap:empty::before { content: "—"; color: var(--ink-3); }
 .wcap:focus { box-shadow: inset 0 0 0 1.6px var(--green-500), 0 0 0 4px var(--green-100); background: var(--green-50); }
+.wcap.empty-req { box-shadow: inset 0 0 0 1.6px #F0BCBC; background: var(--err-bg); }
+.wcap.empty-req:empty::before { content: "clique para preencher"; color: var(--err); font-weight: 500; font-size: 11.5px; }
 .wt-cell .prov-dot { position: absolute; top: -3px; right: 2px; }
 
 /* fonte (página real com marca-texto) */
@@ -425,6 +431,7 @@ textarea.input { padding: 12px 14px; min-height: 84px; line-height: 1.5; resize:
 
 /* rodapé */
 .wiz-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 22px; box-shadow: inset 0 1px 0 var(--line); }
+.wiz-foot-l { display: flex; align-items: center; gap: 6px; }
 .wiz-count { font-size: 13px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .wiz-foot .btn svg { margin: 0 2px; }
 

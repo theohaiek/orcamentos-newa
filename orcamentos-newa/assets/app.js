@@ -399,6 +399,7 @@
     S.proposal = { info, columns, errors, obs: clone(tpl().obs.items) };
     if (errors.length) toast(errors.length + " arquivo(s) falharam e foram ignorados.", "err");
     renderReview();
+    openConfirmWizard();   // assistente de conferência abre automaticamente após extrair
   }
 
   /* =========================================================================
@@ -450,12 +451,12 @@
     const note = $("#reviewnote"); if (!note) return;
     if (n === 0) {
       note.innerHTML = '<div class="alert ok" style="margin-bottom:18px">' + I.check +
-        "<span><b>Tudo preenchido.</b> Revise os valores e clique em <b>Exportar PDF</b>.</span></div>";
+        "<span><b>Tudo preenchido.</b> Clique em <b>Conferir e gerar</b> para revisar a origem de cada dado e gerar o PDF.</span></div>";
     } else {
       note.innerHTML = '<div class="alert warn" style="margin-bottom:18px">' + I.alert +
-        "<span><b>" + n + " campo(s) pendente(s).</b> Os campos em vermelho estão vazios — preencha ou marque como “Não Contratado”. O PDF não será gerado enquanto houver pendências.</span></div>";
+        "<span><b>" + n + " campo(s) pendente(s).</b> Os campos em vermelho estão vazios — preencha aqui ou dentro de <b>Conferir e gerar</b>. O PDF não será gerado enquanto houver pendências.</span></div>";
     }
-    const exp = $("#expbtn"); if (exp) exp.disabled = n > 0;
+    const exp = $("#expbtn"); if (exp) exp.disabled = false;  // sempre abre o assistente (resolve pendências lá dentro)
   }
 
   /* Realça tokens {{...}} para leitura no editor/preview */
@@ -810,7 +811,6 @@
   }
 
   function openConfirmWizard() {
-    if (pending() > 0) { toast("Preencha os campos pendentes antes de conferir.", "err"); return; }
     S._wiz = { step: 0, mode: "page", steps: buildSteps() };
     const ex = document.querySelector(".wiz-overlay"); if (ex) ex.remove();
     const ov = document.createElement("div");
@@ -823,7 +823,8 @@
       '<button class="btn icon ghost" data-wclose>' + I.x + "</button></div>" +
       '<div class="wiz-steps" id="wiz-steps"></div>' +
       '<div class="wiz-body" id="wiz-body"></div>' +
-      '<div class="wiz-foot"><button class="btn ghost" id="wiz-prev">' + I.back + " Anterior</button>" +
+      '<div class="wiz-foot"><div class="wiz-foot-l"><button class="btn ghost" id="wiz-fill">Preencher vazios</button>' +
+      '<button class="btn ghost" id="wiz-prev">' + I.back + " Anterior</button></div>" +
       '<div class="wiz-count" id="wiz-count"></div>' +
       '<button class="btn" id="wiz-next">Próximo</button></div></div>';
     document.body.appendChild(ov);
@@ -833,22 +834,44 @@
       ov.querySelectorAll("[data-wm]").forEach((x) => x.classList.toggle("on", x === b));
       renderWizStep();
     }));
+    $("#wiz-fill").onclick = () => {
+      const keys = dataKeys(true);
+      S.proposal.columns.forEach((col) => keys.forEach((k) => { if (!String(col.fields[k] || "").trim()) col.fields[k] = "Não Contratado"; }));
+      renderWizStep(); toast("Campos vazios preenchidos com “Não Contratado”.", "ok");
+    };
     $("#wiz-prev").onclick = () => { if (S._wiz.step > 0) { S._wiz.step--; renderWizStep(); } };
     $("#wiz-next").onclick = () => {
-      if (S._wiz.step < S._wiz.steps.length - 1) { S._wiz.step++; renderWizStep(); }
-      else doExport("#wiz-next");
+      if (S._wiz.step < S._wiz.steps.length - 1) { S._wiz.step++; renderWizStep(); return; }
+      // última etapa: gerar (ou apontar a pendência)
+      const n = pending();
+      if (n > 0) {
+        const fp = S._wiz.steps.findIndex(stepHasPending);
+        if (fp >= 0) { S._wiz.step = fp; renderWizStep(); }
+        toast(n + " campo(s) ainda vazio(s). Preencha os destacados em vermelho ou use “Preencher vazios”.", "err");
+        return;
+      }
+      doExport("#wiz-next");
     };
     renderWizStep();
+  }
+
+  function stepHasPending(st) {
+    const P = S.proposal;
+    if (st.type === "info") return st.rows.some((r) => r.req && !String(P.info[r.key] || "").trim());
+    if (st.type === "sec") return st.rows.some((r) => !r.optional && P.columns.some((c) => !String(c.fields[r.key] || "").trim()));
+    return false;
   }
 
   function renderWizStep() {
     const W = S._wiz, P = S.proposal, steps = W.steps, st = steps[W.step];
     $("#wiz-h").textContent = st.title;
     $("#wiz-count").textContent = "Etapa " + (W.step + 1) + " de " + steps.length;
-    // stepper
-    $("#wiz-steps").innerHTML = steps.map((s, i) =>
-      '<button class="wstep' + (i === W.step ? " on" : i < W.step ? " done" : "") + '" data-si="' + i + '">' +
-      '<span class="wnum">' + (i < W.step ? I.check : i + 1) + "</span><span class=\"wlbl\">" + esc(s.title) + "</span></button>").join("");
+    // stepper (marca etapas com campos pendentes)
+    $("#wiz-steps").innerHTML = steps.map((s, i) => {
+      const pend = stepHasPending(s);
+      return '<button class="wstep' + (i === W.step ? " on" : "") + (pend ? " pend" : i < W.step ? " done" : "") + '" data-si="' + i + '">' +
+        '<span class="wnum">' + (pend ? "!" : i < W.step ? I.check : i + 1) + "</span><span class=\"wlbl\">" + esc(s.title) + "</span></button>";
+    }).join("");
     $("#wiz-steps").querySelectorAll("[data-si]").forEach((b) => (b.onclick = () => { W.step = +b.dataset.si; renderWizStep(); }));
     // nav labels
     $("#wiz-prev").style.visibility = W.step === 0 ? "hidden" : "visible";
@@ -901,14 +924,16 @@
     const head = '<div class="wt-row wt-head"><div class="wt-lbl"></div>' +
       P2.columns.map((c, i) => '<div class="wt-col" style="color:' + insurerById(c.insurer_id).color + '">' + (i + 1) + " · " + esc(insurerById(c.insurer_id).name) + "</div>").join("") + "</div>";
     const rows = st.rows.map((r) => {
+      const req = st.type === "info" ? !!r.req : !r.optional;
       const cells = P2.columns.map((col, ci) => {
         const val = st.type === "info" ? P2.info[r.key] : col.fields[r.key];
         const prov = (col.provenance || {})[r.key];
         const cls = provClass(prov) || "";
+        const empty = !String(val || "").trim();
         const attr = st.type === "info"
           ? ' data-winfo="' + esc(r.key) + '"'
           : ' data-wk="' + esc(r.key) + '" data-wc="' + ci + '"';
-        return '<div class="wt-cell"><div class="wcap" contenteditable="true" spellcheck="false"' + attr +
+        return '<div class="wt-cell"><div class="wcap' + (empty && req ? " empty-req" : "") + '" contenteditable="true" spellcheck="false"' + attr +
           ' data-hl="' + esc(r.key) + '_' + ci + '">' + esc(val || "") + "</div>" +
           (cls ? '<span class="prov-dot ' + cls + '"></span>' : "") + "</div>";
       }).join("");
