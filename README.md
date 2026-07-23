@@ -54,7 +54,10 @@ app-orçamentos-newa/
 ├── data/
 │   ├── insurers.json           # registro de seguradoras (cores, logos, keywords)
 │   └── profiles/               # perfis de extração determinística por layout
-│       └── tradicional.json
+│       ├── tradicional.json    # Porto / Itaú / Azul / Mitsui
+│       ├── autoperfil.json     # Aliro / Yelum
+│       ├── suhai.json
+│       └── _generic.json       # campos de rótulo inequívoco (qualquer layout)
 ├── docs/
 │   └── spec.md                 # especificação, arquitetura e decisões
 ├── orcamentos-newa/            # === o plugin WordPress (pasta que vira o .zip) ===
@@ -94,15 +97,21 @@ injeta *cache-busting*, então um F5 normal já pega a versão nova.
 
 ---
 
-## Como funciona a extração (pipeline de 3 camadas)
+## Como funciona a extração (pipeline em camadas)
 
 1. **Tokenização posicional** (PyMuPDF): cada palavra do PDF com sua página e posição.
 2. **Camada 1 — perfil determinístico** (`data/profiles/*.json`): âncora por rótulo +
-   captura posicional + validação por regex. Gera a proveniência exata.
-3. **Camada 2 — validação/drift:** campo sem âncora/regex cai para a IA; muitos campos
+   captura posicional (`right`/`below`/`table_cell`/`text_regex`) + validação por regex.
+   Gera a proveniência exata. Perfis por família de layout: `tradicional`
+   (Porto/Itaú/Azul/Mitsui), `autoperfil` (Aliro/Yelum), `suhai`.
+3. **Camada 1b — genérico** (`_generic.json`): preenche campos de **rótulo inequívoco**
+   (RCF, CEP, vidros, faróis, lanternas, retrovisores, reboque, carro reserva) em
+   **qualquer** layout, com guardas contra valor errado.
+4. **Camada 2 — validação/drift:** campo sem âncora/regex cai para a IA; muitos campos
    falhando sinalizam "layout pode ter mudado".
-4. **Camada 3 — IA (fallback):** só para o que faltou; o valor é localizado no texto do
-   PDF (string-match). Sem match → confiança baixa e o campo fica pendente.
+5. **Camada 3 — IA (fallback):** só para os campos restantes (schema reduzido → rápido);
+   o valor é localizado no texto do PDF (string-match). Sem match → confiança baixa e o
+   campo fica pendente. Modelo padrão: **`gpt-5-mini`** (`reasoning_effort=minimal`).
 
 PDFs escaneados (sem texto) ainda não são suportados — fallback de visão previsto no
 [`TODO.md`](TODO.md).

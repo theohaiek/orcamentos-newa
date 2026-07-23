@@ -1427,7 +1427,7 @@
       '<div class="stagger" style="max-width:640px;display:flex;flex-direction:column;gap:20px">' +
       '<div class="card pad"><h3 style="margin-bottom:14px">Integração de IA (OpenAI)</h3>' +
       '<div class="field"><label>Chave da API' + (cfg.has_openai_key ? " (configurada — deixe vazio para manter)" : "") + '</label><input class="input" id="cok" type="password" placeholder="sk-..."></div>' +
-      '<div class="field" style="margin-top:12px"><label>Modelo</label><input class="input" id="cmodel" value="' + esc(cfg.model || "gpt-4o") + '"></div>' +
+      '<div class="field" style="margin-top:12px"><label>Modelo</label><input class="input" id="cmodel" value="' + esc(cfg.model || "gpt-5-mini") + '"></div>' +
       '<button class="btn" id="savecfg" style="margin-top:16px">Salvar integração</button></div>' +
       '<div class="card pad"><h3 style="margin-bottom:14px">Dados da corretora (usados na capa da proposta)</h3>' +
       field("cnome", "Nome", co.nome || "NEWA Seguros") +

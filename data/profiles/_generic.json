@@ -1,0 +1,16 @@
+{
+  "id": "_generic",
+  "label": "Genérico — campos de rótulo inequívoco (roda em qualquer layout, após o perfil específico)",
+  "match": [],
+  "fields": {
+    "rcf_danos_materiais": { "anchor": "danos materiais", "pick": "right", "regex": "\\d{2,3}(?:\\.\\d{3})+,\\d{2}" },
+    "rcf_danos_pessoais":  { "anchor": "danos corporais", "pick": "right", "regex": "\\d{2,3}(?:\\.\\d{3})+,\\d{2}" },
+    "cep_circulacao":      { "anchor": "pernoite", "pick": "right", "regex": "\\d{5}-?\\d{3}" },
+    "para_brisas":  { "pick": "text_regex", "anchor": "Para-brisas/Vidros", "regex": "(?:para.?brisa|vidros?)\\D{0,22}(R\\$ ?[\\d.]+,?\\d*)" },
+    "farois":       { "pick": "text_regex", "anchor": "Faróis", "regex": "far(?:[oó]is|ol)\\D{0,20}(R\\$ ?[\\d.]+,?\\d*)" },
+    "lanternas":    { "pick": "text_regex", "anchor": "Lanternas", "regex": "lanternas?\\D{0,20}(R\\$ ?[\\d.]+,?\\d*)" },
+    "retrovisores": { "pick": "text_regex", "anchor": "Retrovisores", "regex": "retrovisor(?:es)?\\D{0,20}(R\\$ ?[\\d.]+,?\\d*)" },
+    "km_reboque":   { "pick": "text_regex", "anchor": "Reboque/Guincho", "regex": "(?:reboque|guincho)\\D{0,16}(km ?ilimitad\\w*|km ?livre|ilimitad\\w*|\\d{2,4} ?km)" },
+    "diarias_carro_reserva": { "pick": "text_regex", "anchor": "Carro reserva", "regex": "carro reserva\\D{0,26}(\\d+ ?di[aá]s?)" }
+  }
+}

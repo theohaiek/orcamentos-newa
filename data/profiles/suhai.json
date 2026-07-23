@@ -1,0 +1,13 @@
+{
+  "id": "suhai",
+  "label": "Suhai Seguradora",
+  "match": ["suhai seguradora"],
+  "fields": {
+    "ano_modelo":        { "anchor": "fabr./modelo", "pick": "below", "at_x": 15, "xlo": 8, "xhi": 90, "regex": "\\d{4}\\s*/\\s*\\d{2,4}" },
+    "veiculo":           { "anchor": "modelo do ve", "pick": "below", "at_x": 138, "xlo": 8, "xhi": 220, "regex": "[A-Za-z][A-Za-zÀ-úÇ0-9.,/() ]{4,}" },
+    "colisao_incendio_roubo": { "anchor": "compreensiva", "pick": "below", "at_x": 136, "xlo": 6, "xhi": 40, "regex": "\\d+%\\s?\\w*" },
+    "franquia_veiculo":  { "anchor": "franquia perdas", "pick": "right", "regex": "R?\\$? ?[\\d.]+,\\d{2}" },
+    "a_vista":           { "anchor": "premio total", "pick": "right", "regex": "[\\d.]+,\\d{2}" },
+    "rcf_danos_materiais": { "anchor": "danos materiais", "pick": "right", "regex": "[\\d.]+,\\d{2}" }
+  }
+}

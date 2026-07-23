@@ -23,17 +23,28 @@ Backlog de melhorias e correções. Marque `[x]` ao concluir.
 - [x] **6. "Quantas propostas comparar?"** — 2 é o padrão absoluto; 1/3/4/5 marcadas
       com badge **beta** e aviso "Em desenvolvimento — pode apresentar bugs".
 
-## Extração (Fase B — perfis)
+## Extração — perfis e cobertura
 
-- [ ] Perfil dedicado para o **layout Allianz nativo (multi-oferta)** — hoje cai no
-      perfil "tradicional"/IA; precisa escolher a oferta correta.
-- [ ] Autorar perfis das demais seguradoras contra os PDFs de amostra.
+- [x] **Modelo padrão → `gpt-5-mini`** com `reasoning_effort=minimal` + schema só dos
+      campos que faltam (extração de 65s → ~8s por arquivo).
+- [x] **Motor**: estratégia `text_regex` (campos em texto corrido) + tolerância x
+      assimétrica (`xlo`/`xhi`) para evitar coluna anterior.
+- [x] **Perfil "autoperfil"** (Aliro/Yelum) e **"suhai"** autorados; **camada genérica**
+      (`_generic.json`) que preenche campos de rótulo inequívoco (RCF, CEP, vidros,
+      faróis, lanternas, retrovisores, reboque, carro reserva) em QUALQUER layout, com
+      guardas contra valor errado (RCF exige LMI ≥ 10.000). Verde/arquivo: ~3.7 → ~9.7
+      (de ~30); nenhum valor verde incorreto (auditado).
+- [ ] Perfis dedicados para os singletons ainda majoritariamente na IA:
+      **bradesco, zurich, hdi, mapfre, tokio, darwin, allianz(nativo multi-oferta),
+      justos** — cada um tem layout próprio; hoje o genérico pega 3–9 campos e a IA
+      (verificada) completa o resto.
 - [ ] Editar/gerenciar perfis pela UI (seção *Modelos de Entrada*).
 - [ ] Suporte real a comparar 3–5 propostas (hoje em beta).
 
 ## Produção (WordPress)
 
-- [ ] Portar motor de extração + perfis para PHP (`smalot/pdfparser`).
+- [ ] Portar motor de extração + perfis para PHP (`smalot/pdfparser`) — incluindo as
+      estratégias `table_cell`/`text_regex`/`below(xlo,xhi)` e a camada `_generic`.
 - [ ] Login via usuários nativos do WordPress; persistência em `wp_options`.
 - [ ] Empacotador `.zip` do plugin instalável.
 - [ ] Modo Visual/recortes: usar Imagick quando disponível; senão, o fac-símile de

@@ -1,0 +1,23 @@
+{
+  "id": "autoperfil",
+  "label": "Auto Perfil (sistema Newa — Aliro/Yelum/HDI)",
+  "match": ["demonstrativo de premio", "coberturas contratadas"],
+  "fields": {
+    "segurado":          { "anchor": "nome do segurado", "pick": "below", "at_x": 18, "xtol": 230, "regex": "[A-Za-zÀ-úÇ][A-Za-zÀ-úÇ ]{4,}" },
+    "principal_condutor":{ "anchor": "nome do principal condutor", "pick": "below", "at_x": 18, "xtol": 150, "regex": "[A-Za-zÀ-úÇ][A-Za-zÀ-úÇ ]{4,}" },
+    "veiculo":           { "anchor": "marca/tipo", "pick": "below", "at_x": 91, "xlo": 8, "xhi": 200, "regex": "[A-Za-z][A-Za-zÀ-úÇ0-9.,/() ]{4,}" },
+    "ano_modelo":        { "anchor": "fabricacao/modelo", "pick": "below", "at_x": 298, "xtol": 70, "regex": "\\d{4}\\s*/\\s*\\d{4}" },
+    "cep_circulacao":    { "anchor": "cep de pernoite", "pick": "below", "at_x": 383, "xtol": 45, "regex": "\\d{5}-?\\d{0,3}" },
+    "a_vista":           { "anchor": "premio total", "pick": "below", "at_x": 425, "xtol": 12, "regex": "[\\d.]+,\\d{2}" },
+    "colisao_incendio_roubo": { "anchor": "compreensiva", "pick": "table_cell", "col": [310, 410], "regex": "\\d+\\s?%" },
+    "franquia_veiculo":  { "anchor": "compreensiva", "pick": "table_cell", "col": [515, 575], "regex": "[\\d.]+,\\d{2}" },
+    "rcf_danos_materiais": { "anchor": "danos materiais", "pick": "table_cell", "col": [325, 405], "regex": "[\\d.]+,\\d{2}" },
+    "rcf_danos_pessoais":  { "anchor": "danos corporais", "pick": "table_cell", "col": [325, 405], "regex": "[\\d.]+,\\d{2}" },
+    "diarias_carro_reserva": { "anchor": "carro reserva ou", "pick": "right", "regex": "\\d+ ?DIAS" },
+    "para_brisas":       { "pick": "text_regex", "anchor": "Para-brisa", "regex": "para.?brisa\\D{0,10}(R\\$ ?[\\d.]+,?\\d*)" },
+    "farois":            { "pick": "text_regex", "anchor": "Faróis", "regex": "far[oó]is\\D{0,10}(R\\$ ?[\\d.]+,?\\d*)" },
+    "lanternas":         { "pick": "text_regex", "anchor": "Lanternas", "regex": "lanternas\\D{0,10}(R\\$ ?[\\d.]+,?\\d*)" },
+    "retrovisores":      { "pick": "text_regex", "anchor": "Retrovisores", "regex": "retrovisores\\D{0,10}(R\\$ ?[\\d.]+,?\\d*)" },
+    "reparo_amassados":  { "pick": "text_regex", "anchor": "Pequenos Reparos", "regex": "pequenos reparos\\D{0,20}(R\\$ ?[\\d.]+,?\\d*)" }
+  }
+}
