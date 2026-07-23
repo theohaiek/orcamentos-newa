@@ -1,0 +1,21 @@
+{
+  "id": "tradicional",
+  "label": "Orçamento Tradicional (sistema Newa / Allianz single-offer)",
+  "match": ["coberturas e servi", "uso interno da cia"],
+  "fields": {
+    "seguradora":        { "anchor": "seguradora", "pick": "below", "at_x": 29, "xtol": 130, "regex": "[A-Za-zÀ-úÇãõ][A-Za-zÀ-úÇãõ ]{2,}" },
+    "segurado":          { "anchor": "segurado(a)", "pick": "below", "at_x": 30, "xtol": 280, "regex": "[A-Za-zÀ-úÇ][A-Za-zÀ-úÇ ]{4,}" },
+    "principal_condutor":{ "anchor": "condutor", "pick": "below", "at_x": 29, "xtol": 280, "regex": "[A-Za-zÀ-úÇ][A-Za-zÀ-úÇ ]{4,}" },
+    "ano_modelo":        { "anchor": "fabrica", "pick": "below", "at_x": 455, "xtol": 90, "regex": "\\d{4}\\s*/\\s*\\d{4}" },
+    "data_proposta":     { "anchor": "realizado", "pick": "below", "at_x": 197, "xtol": 40, "regex": "\\d{2}/\\d{2}/\\d{4}" },
+    "validade":          { "anchor": "validade", "pick": "below", "at_x": 268, "xtol": 40, "regex": "\\d{2}/\\d{2}/\\d{4}" },
+    "uso_veiculo":       { "anchor": "tipo de uso", "pick": "below", "at_x": 29, "xtol": 60, "regex": "[A-Za-zÀ-úÇ]{3,}" },
+    "cep_circulacao":    { "anchor": "cep de pernoite", "pick": "below", "at_x": 203, "xtol": 60, "regex": "\\d{5}-?\\d{3}" },
+    "diarias_carro_reserva": { "anchor": "carro reserva porte", "pick": "right", "regex": "\\d+ ?dias" },
+    "colisao_incendio_roubo": { "anchor": "compreensiva", "pick": "table_cell", "col": [240, 305], "regex": "\\d+[.,]?\\d*\\s*%" },
+    "franquia_veiculo":  { "anchor": "compreensiva", "pick": "table_cell", "col": [355, 430], "regex": "R\\$ ?[\\d.]+,\\d{2}" },
+    "rcf_danos_materiais": { "anchor": "danos materiais", "pick": "table_cell", "col": [240, 320], "regex": "R\\$ ?[\\d.]+,\\d{2}|[\\d.]+,\\d{2}" },
+    "rcf_danos_pessoais":  { "anchor": "danos corporais", "pick": "table_cell", "col": [240, 320], "regex": "R\\$ ?[\\d.]+,\\d{2}|[\\d.]+,\\d{2}" },
+    "a_vista":           { "anchor": "valor total", "pick": "right", "page": 2, "regex": "R\\$ ?[\\d.]+,\\d{2}" }
+  }
+}

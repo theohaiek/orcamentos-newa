@@ -31,13 +31,28 @@ POST /api/users / PUT|DELETE /api/users/<u>  (admin)
 POST /api/extract  (multipart PDF)        -> {fields, missing, insurer_id}
 ```
 
-## Extração / normalização
-1. Texto nativo extraído do PDF (todos os 15 modelos de input são texto nativo — sem OCR).
-2. OpenAI (`gpt-4o`, `response_format` = JSON Schema estrito) mapeia o texto para o
-   schema fixo e lista `campos_nao_encontrados`. Temperatura 0. Nunca inventa valores.
-3. Seguradora detectada por palavras-chave no conteúdo (+ nome do arquivo).
-4. **Fallback previsto:** se o PDF não tiver texto (escaneado), enviar as páginas
-   como imagem para o modelo de visão. (Ainda não implementado — hoje falha com aviso.)
+## Extração / normalização — pipeline de 3 camadas (implementado, piloto)
+Ver o plano completo em `docs/superpowers/specs` (extração determinística + proveniência).
+1. **Tokenização posicional** (PyMuPDF `get_text("words")`) → palavras/linhas com bbox
+   (`extract_engine.py`, dev). No plugin: `smalot/pdfparser` (`getDataTM`) em PHP.
+2. **Camada 1 — determinístico por perfil** (`data/profiles/*.json`): âncora por rótulo +
+   captura posicional (`pick`: right/below/table_cell/regex_near) + validação por regex.
+   Cada campo carrega **proveniência** (página, bbox, trecho, âncora). Perfil piloto:
+   `tradicional` (layout Newa/Allianz single-offer — cobre porto, itau e afins).
+3. **Camada 2 — validação/drift**: campo sem âncora/regex → cai para IA; muitos campos
+   falhando → flag `drift` ("layout pode ter mudado").
+4. **Camada 3 — IA (fallback)** só para os campos restantes; o valor é **ancorado e
+   verificado por string-match** nos tokens (`method:"ai"`, `confidence:"verificada"`);
+   sem match → `confidence:"baixa"` e o campo fica pendente.
+5. Seguradora detectada por palavras-chave no conteúdo (+ nome do arquivo).
+6. **Proveniência na UI**: ponto colorido por método em cada cápsula → popup com origem
+   nos modos **Visual** (mapa de fragmentos da página, sem raster — portável ao WP) e
+   **Texto**, alternáveis por toggle no topo. Painel **"Deixado de fora"** lista valores
+   em R$ do PDF não capturados, com opção de promover a um campo.
+7. **Fallback previsto (não implementado):** PDF escaneado → visão da IA.
+
+Payload `/api/extract`: `{insurer_id, profile_used, profile_id, ai_used, drift, fields,
+provenance, missing, unmapped, pages[fragments]}`.
 
 ### Schema normalizado
 - **Informações (compartilhadas):** segurado, veiculo, ano_modelo, principal_condutor,
@@ -89,8 +104,13 @@ nos valores, `scale(.96)` no toque, animações escalonadas, hit-areas ≥ 40px.
    receber uma foto/hero oficial da NEWA depois.
 
 ## Pendências / roadmap
-- [ ] Portar a lógica de extração e a API para o plugin PHP (`includes/`), com login
-      via usuários do WordPress e persistência em `wp_options`.
+- [x] Extração determinística por perfil + proveniência + painel "deixado de fora" (piloto).
+- [ ] **Fase B**: autorar perfis das demais seguradoras/layouts (Allianz nativo multi-oferta,
+      etc.) contra os PDFs de amostra; IA cobre as sem perfil.
+- [ ] Editar/gerenciar perfis pela UI (Modelos de Entrada).
+- [ ] (Opcional) tela de confirmação pós-upload com resumo por coluna.
+- [ ] Portar a lógica de extração (motor + perfis) para o plugin PHP (`smalot/pdfparser`),
+      login via usuários do WordPress e persistência em `wp_options`.
 - [ ] Empacotador `.zip` do plugin.
 - [ ] Fallback de visão para PDFs escaneados.
 - [ ] Calibrar cores/logos oficiais das seguradoras.

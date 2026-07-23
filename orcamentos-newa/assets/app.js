@@ -168,7 +168,7 @@
   }
 
   /* ---------------- Estado ---------------- */
-  const S = { me: null, insurers: [], config: null, view: "nova", proposal: null };
+  const S = { me: null, insurers: [], config: null, view: "nova", proposal: null, provView: "visual" };
 
   const insurerById = (id) => S.insurers.find((x) => x.id === id) || S.insurers.find((x) => x.id === "generico") || S.insurers[0];
   function detectInsurer(text, filename) {
@@ -371,9 +371,14 @@
         const fd = new FormData(); fd.append("file", files[i]);
         const r = await api("/extract", { method: "POST", body: fd });
         const insurer_id = r.insurer_id || detectInsurer(r.raw_text, files[i].name);
-        columns.push({ filename: files[i].name, insurer_id, fields: r.fields, missing: r.missing || [] });
+        columns.push({
+          filename: files[i].name, insurer_id, fields: r.fields, missing: r.missing || [],
+          provenance: r.provenance || {}, unmapped: r.unmapped || [], pages: r.pages || [],
+          profile_used: !!r.profile_used, profile_id: r.profile_id || null, ai_used: !!r.ai_used, drift: !!r.drift,
+        });
         row.className = "st done"; row.innerHTML = I.check + " ok";
-        meta.textContent = (insurerById(insurer_id).name) + " · " + (r.missing || []).length + " campo(s) a revisar";
+        const src = r.profile_used ? "perfil " + (r.profile_id || "") : "IA";
+        meta.textContent = insurerById(insurer_id).name + " · " + src + " · " + (r.missing || []).length + " a revisar";
       } catch (e) {
         errors.push(files[i].name);
         row.className = "st err"; row.innerHTML = I.alert + " falhou";
@@ -408,14 +413,30 @@
 
   function renderReview() {
     const P = S.proposal;
+    const nUnmapped = P.columns.reduce((a, col) => a + (col.unmapped || []).length, 0);
     root().innerHTML = shell("Nova Proposta", "Revisão da proposta",
+      '<div class="provtoggle" id="provtoggle" title="Como mostrar a origem de cada dado">' +
+      '<span class="pt-lbl">Origem:</span>' +
+      '<button data-pv="visual"' + (S.provView === "visual" ? ' class="on"' : "") + ">Visual</button>" +
+      '<button data-pv="texto"' + (S.provView === "texto" ? ' class="on"' : "") + ">Texto</button></div>" +
+      '<button class="btn secondary" id="unmapbtn">' + I.layers + " Não mapeado" + (nUnmapped ? " (" + nUnmapped + ")" : "") + "</button>" +
       '<button class="btn secondary" id="backbtn">' + I.back + " Recomeçar</button>" +
-      '<button class="btn secondary" id="fillbtn">Preencher vazios: “Não Contratado”</button>' +
+      '<button class="btn secondary" id="fillbtn">Preencher vazios</button>' +
       '<button class="btn" id="expbtn">' + I.dl + " Exportar PDF</button>");
     const c = $("#view-content");
     c.innerHTML =
       '<div id="reviewnote"></div>' +
+      '<div class="prov-hint muted">Clique no ponto de origem de cada campo para ver <b>de onde veio no PDF</b>. ' +
+      '<span class="dotlegend"><span class="prov-dot method-profile"></span>Perfil</span>' +
+      '<span class="dotlegend"><span class="prov-dot method-ai"></span>IA verificada</span>' +
+      '<span class="dotlegend"><span class="prov-dot method-low"></span>Confirmar</span></div>' +
       '<div class="orca-doc" id="doc">' + buildDoc(P, true) + "</div>";
+    $("#provtoggle").querySelectorAll("[data-pv]").forEach((b) => (b.onclick = () => {
+      S.provView = b.dataset.pv;
+      $("#provtoggle").querySelectorAll("[data-pv]").forEach((x) => x.classList.toggle("on", x === b));
+      const open = $(".prov-modal"); if (open) reopenProvenance();
+    }));
+    $("#unmapbtn").onclick = () => openUnmapped();
     $("#backbtn").onclick = () => { if (confirm("Descartar esta proposta e recomeçar?")) { S.proposal = null; S.nova = null; viewNova(); } };
     $("#fillbtn").onclick = () => { fillEmpties(); };
     $("#expbtn").onclick = () => doExport();
@@ -439,6 +460,21 @@
   /* Realça tokens {{...}} para leitura no editor/preview */
   const mark = (txt) => esc(txt).replace(/\{\{([^}]+)\}\}/g, '<span class="ph-token">{{$1}}</span>');
 
+  /* classe do ponto de proveniência a partir do método/confiança */
+  function provClass(p) {
+    if (!p) return null;
+    if (p.method === "profile") return "method-profile";
+    if (p.method === "manual") return "method-manual";
+    if (p.method === "ai") return p.confidence === "baixa" ? "method-low" : "method-ai";
+    return "method-ai";
+  }
+  const METHOD_LABEL = {
+    "method-profile": ["Perfil determinístico", "Extraído por posição/rótulo — origem exata."],
+    "method-ai": ["IA verificada", "Interpretado por IA e confirmado no texto do PDF."],
+    "method-low": ["IA — confirme", "Valor da IA não localizado literalmente no PDF. Confira."],
+    "method-manual": ["Manual", "Atribuído manualmente a partir do painel Não mapeado."],
+  };
+
   /* constrói o HTML do documento (2 páginas).
      editable=true -> cápsulas editáveis (revisão) ; ph=true -> modo placeholder (editor) */
   function buildDoc(P, editable, ph, tOverride) {
@@ -448,6 +484,12 @@
     const cfg = S.config.corretora || {};
     const labelw = ncols >= 3 ? "240px" : "300px";
 
+    const provDot = (key, ci) => {
+      const col = P.columns[ci]; if (!col) return "";
+      const cls = provClass((col.provenance || {})[key]);
+      if (!cls) return "";
+      return '<span class="prov-dot ' + cls + '" data-prov="' + esc(key) + '" data-col="' + ci + '" title="Ver origem no PDF"></span>';
+    };
     const cap = (val, kk, ci, lbl) => {
       if (ph) return '<div class="cap ph">{{' + esc(lbl) + "}}</div>";
       const empty = !String(val || "").trim();
@@ -455,13 +497,15 @@
       const na = /não contratado|nao contratado/i.test(String(val || ""));
       const cls = "cap" + (empty ? " empty" : yes ? " yes" : na ? " na" : "");
       const attrs = editable ? ' contenteditable="true" data-k="' + kk + '" data-c="' + ci + '" spellcheck="false"' : "";
-      return '<div class="' + cls + '"' + attrs + ">" + esc(empty ? (editable ? "" : "—") : val) + "</div>";
+      const h = '<div class="' + cls + '"' + attrs + ">" + esc(empty ? (editable ? "" : "—") : val) + "</div>";
+      return editable ? '<div class="capwrap">' + h + provDot(kk, ci) + "</div>" : h;
     };
     const infoCap = (r) => {
       if (ph) return '<div class="cap ph">{{' + esc(r.label) + "}}</div>";
       const v = P.info[r.key], empty = !String(v || "").trim();
       const attrs = editable ? ' contenteditable="true" data-info="' + r.key + '" spellcheck="false"' : "";
-      return '<div class="cap' + (empty ? " empty" : "") + '"' + attrs + ">" + esc(empty ? "" : v) + "</div>";
+      const h = '<div class="cap' + (empty ? " empty" : "") + '"' + attrs + ">" + esc(empty ? "" : v) + "</div>";
+      return editable ? '<div class="capwrap">' + h + provDot(r.key, 0) + "</div>" : h;
     };
     const colHead = (col, i) => {
       if (ph) return '<div class="col-head" style="background:var(--green-700);color:#fff"><span class="badge" style="background:rgba(255,255,255,.28)">' + (i + 1) + '</span><span class="nm">{{Seguradora ' + (i + 1) + "}}</span></div>";
@@ -562,6 +606,8 @@
     });
     // troca de seguradora ao clicar no header da coluna
     doc.querySelectorAll(".col-head").forEach((ch) => (ch.onclick = () => pickInsurer(+ch.dataset.col)));
+    // ponto de proveniência -> popup de origem
+    doc.querySelectorAll(".prov-dot").forEach((d) => (d.onclick = (e) => { e.stopPropagation(); openProvenance(+d.dataset.col, d.dataset.prov); }));
   }
   function refreshCap(el) {
     if (el.dataset.info != null || el.dataset.k != null) {
@@ -588,6 +634,125 @@
     });
   }
 
+  /* ---------------- Proveniência (de onde veio cada dado) ---------------- */
+  function fieldLabel(key) {
+    const t = tpl();
+    const fi = t.info.find((r) => r.key === key); if (fi) return fi.label;
+    for (const s of t.sections) { const r = s.rows.find((x) => x.key === key); if (r) return r.label; }
+    return key;
+  }
+  function syncTopToggle() {
+    const tg = $("#provtoggle"); if (!tg) return;
+    tg.querySelectorAll("[data-pv]").forEach((x) => x.classList.toggle("on", x.dataset.pv === S.provView));
+  }
+  function reopenProvenance() { if (S._prov) openProvenance(S._prov.ci, S._prov.key); }
+
+  function openProvenance(ci, key) {
+    const col = S.proposal.columns[ci]; if (!col) return;
+    const p = (col.provenance || {})[key];
+    const value = key in S.proposal.info && ci === 0 ? S.proposal.info[key] : (col.fields || {})[key];
+    S._prov = { ci, key };
+    const ex = document.querySelector(".prov-overlay"); if (ex) ex.remove();
+    const cls = provClass(p) || "method-low";
+    const [mlabel, mdesc] = METHOD_LABEL[cls] || ["—", ""];
+    let body;
+    if (S.provView === "visual") {
+      if (p && p.page && p.bbox) {
+        const pg = (col.pages || []).find((x) => x.n === p.page);
+        body = pg ? provPageHTML(pg, p.bbox) : '<div class="prov-empty">Página indisponível.</div>';
+      } else {
+        body = '<div class="prov-empty">' + I.alert + " Origem não localizada no PDF — confirme o valor manualmente.</div>";
+      }
+    } else {
+      body = p
+        ? '<div class="prov-text">' +
+          '<div class="pr"><span>Página</span><b>' + (p.page || "—") + "</b></div>" +
+          (p.anchor ? '<div class="pr"><span>Rótulo-âncora</span><b>' + esc(p.anchor) + "</b></div>" : "") +
+          '<div class="pr col"><span>Trecho no PDF</span><div class="snip">' + esc(p.snippet || "—") + "</div></div></div>"
+        : '<div class="prov-empty">Sem dados de origem para este campo.</div>';
+    }
+    const ov = document.createElement("div");
+    ov.className = "overlay prov-overlay";
+    ov.innerHTML =
+      '<div class="prov-modal card"><div class="grad-bar"></div>' +
+      '<div class="pm-head"><div><div class="pm-field">' + esc(fieldLabel(key)) + " · " + esc(insurerById(col.insurer_id).name) + "</div>" +
+      '<div class="pm-value">' + esc(value || "—") + "</div></div>" +
+      '<button class="btn icon ghost" data-close>' + I.x + "</button></div>" +
+      '<div class="pm-badge ' + cls + '"><span class="prov-dot ' + cls + '"></span><b>' + mlabel + "</b><span class=\"muted\">" + mdesc + "</span></div>" +
+      '<div class="provtoggle sm inpop"><span class="pt-lbl">Ver origem:</span>' +
+      '<button data-pv="visual"' + (S.provView === "visual" ? ' class="on"' : "") + ">Visual</button>" +
+      '<button data-pv="texto"' + (S.provView === "texto" ? ' class="on"' : "") + ">Texto</button></div>" +
+      '<div class="pm-body">' + body + "</div></div>";
+    document.body.appendChild(ov);
+    const close = () => { ov.remove(); S._prov = null; };
+    ov.querySelector("[data-close]").onclick = close;
+    ov.addEventListener("mousedown", (e) => { if (e.target === ov) close(); });
+    ov.querySelectorAll("[data-pv]").forEach((b) => (b.onclick = () => { S.provView = b.dataset.pv; syncTopToggle(); openProvenance(ci, key); }));
+    // auto-scroll até o destaque (modo visual)
+    const scroll = ov.querySelector(".prov-page-scroll"), hl = ov.querySelector(".pf-hl");
+    if (scroll && hl) scroll.scrollTop = Math.max(0, parseFloat(hl.style.top) - 120);
+  }
+
+  function provPageHTML(pg, bbox) {
+    const W = 470, sc = W / pg.w, H = pg.h * sc;
+    const frags = pg.fragments.map((f) => {
+      const l = f.bbox[0] * sc, t = f.bbox[1] * sc, h = (f.bbox[3] - f.bbox[1]) * sc;
+      return '<div class="pf" style="left:' + l.toFixed(1) + "px;top:" + t.toFixed(1) + "px;font-size:" + Math.max(4, h * 0.92).toFixed(1) + 'px">' + esc(f.text) + "</div>";
+    }).join("");
+    const hl = '<div class="pf-hl" style="left:' + (bbox[0] * sc).toFixed(1) + "px;top:" + (bbox[1] * sc).toFixed(1) +
+      "px;width:" + ((bbox[2] - bbox[0]) * sc).toFixed(1) + "px;height:" + ((bbox[3] - bbox[1]) * sc).toFixed(1) + 'px"></div>';
+    return '<div class="prov-page-scroll"><div class="prov-page" style="width:' + W + "px;height:" + H.toFixed(0) + 'px">' + frags + hl + "</div></div>";
+  }
+
+  /* ---------------- Painel "Não mapeado" ---------------- */
+  function allFieldKeys() {
+    const t = tpl(); const out = t.info.map((r) => [r.key, r.label]);
+    t.sections.forEach((s) => s.rows.forEach((r) => out.push([r.key, s.title + " · " + r.label])));
+    return out;
+  }
+  function openUnmapped() {
+    const P = S.proposal;
+    const ex = document.querySelector(".unmap-overlay"); if (ex) ex.remove();
+    const opts = allFieldKeys().map(([k, l]) => '<option value="' + esc(k) + '">' + esc(l) + "</option>").join("");
+    const cols = P.columns.map((col, ci) => {
+      const items = (col.unmapped || []);
+      const rows = items.length
+        ? items.map((it, ii) =>
+            '<div class="um-row" data-ci="' + ci + '" data-ii="' + ii + '"><div class="um-txt"><span class="um-pg">p' + it.page + "</span>" + esc(it.text) + "</div>" +
+            '<div class="um-act"><select class="select input um-sel"><option value="">Atribuir a…</option>' + opts + "</select></div></div>").join("")
+        : '<div class="prov-empty">Nada fora do mapeamento nesta coluna.</div>';
+      return '<div class="um-col"><div class="um-colh"><span class="badge-n">' + (ci + 1) + "</span>" + esc(insurerById(col.insurer_id).name) +
+        '<span class="muted"> · ' + items.length + " item(ns)</span></div>" + rows + "</div>";
+    }).join("");
+    const ov = document.createElement("div");
+    ov.className = "overlay unmap-overlay";
+    ov.innerHTML =
+      '<div class="unmap-modal card"><div class="grad-bar"></div>' +
+      '<div class="um-head"><div><h3>Deixado de fora</h3><p class="muted">Valores presentes no PDF que nenhum campo capturou. Atribua a um campo ou ignore.</p></div>' +
+      '<button class="btn icon ghost" data-close>' + I.x + "</button></div>" +
+      '<div class="um-body">' + cols + "</div></div>";
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    ov.querySelector("[data-close]").onclick = close;
+    ov.addEventListener("mousedown", (e) => { if (e.target === ov) close(); });
+    ov.querySelectorAll(".um-sel").forEach((sel) => (sel.onchange = () => {
+      const key = sel.value; if (!key) return;
+      const row = sel.closest(".um-row"), ci = +row.dataset.ci, ii = +row.dataset.ii;
+      promoteUnmapped(ci, ii, key); close(); renderReview(); openUnmapped();
+    }));
+  }
+  function promoteUnmapped(ci, ii, key) {
+    const col = S.proposal.columns[ci];
+    const it = (col.unmapped || [])[ii]; if (!it) return;
+    const m = it.text.match(/R\$ ?[\d.]+,\d{2}|\d+ ?(dias|km)|\d+[.,]?\d*%|sim|não|nao|km ?ilimitad[oa]?/i);
+    const val = m ? m[0] : it.text;
+    col.fields[key] = val;
+    col.provenance[key] = { value: val, method: "manual", page: it.page, bbox: it.bbox, snippet: it.text, anchor: null };
+    if (ci === 0 && key in S.proposal.info) S.proposal.info[key] = val;
+    col.unmapped.splice(ii, 1);
+    toast("“" + fieldLabel(key) + "” preenchido a partir do PDF.", "ok");
+  }
+
   /* =========================================================================
      EXPORT PDF (html2canvas + jsPDF)
      ========================================================================= */
@@ -598,6 +763,7 @@
     try {
       // clona o doc sem edição para captura limpa
       const src = $("#doc");
+      src.classList.add("exporting");
       src.querySelectorAll("[contenteditable]").forEach((e) => e.setAttribute("contenteditable", "false"));
       const pages = src.querySelectorAll(".doc-page");
       const { jsPDF } = window.jspdf;
@@ -616,10 +782,11 @@
       const nome = (S.proposal.info.segurado || "cliente").split(" ")[0].toLowerCase();
       pdf.save("proposta-newa-" + nome + ".pdf");
       src.querySelectorAll("[contenteditable]").forEach((e) => e.setAttribute("contenteditable", "true"));
+      src.classList.remove("exporting");
       toast("PDF gerado com sucesso.", "ok");
     } catch (e) {
       toast("Falha ao gerar PDF: " + (e.message || e), "err");
-    } finally { btn.disabled = false; btn.innerHTML = old; }
+    } finally { const d = $("#doc"); if (d) d.classList.remove("exporting"); btn.disabled = false; btn.innerHTML = old; }
   }
 
   /* =========================================================================
