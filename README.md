@@ -6,12 +6,20 @@ campos automaticamente, confere **de onde veio cada dado** e exporta uma
 **Proposta de Seguro** de 2 páginas (capa personalizada + comparativo lado a lado),
 pronta para enviar ao cliente.
 
-Distribuído como **plugin do WordPress** e também executável localmente para
-desenvolvimento/edição ao vivo do visual.
+Será distribuído como **aplicativo desktop instalável** (Windows e macOS), com um
+backend mínimo em n8n para controle de acesso e chave de API. Hoje roda localmente
+para desenvolvimento/edição ao vivo do visual.
+
+> **Mudança de rumo (2026-07-25):** a distribuição como plugin WordPress foi
+> descartada — o `smalot/pdfparser`, única biblioteca PHP viável em hospedagem
+> compartilhada, não expõe o agrupamento por bloco do PDF, que é justamente o que
+> levou a extração determinística de 33% para 81%. Medição em
+> [`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md); novo desenho em
+> [`docs/superpowers/specs/2026-07-25-app-desktop-design.md`](docs/superpowers/specs/2026-07-25-app-desktop-design.md).
 
 > **Status:** v0.3 — funcional ponta a ponta em desenvolvimento local (servidor Python
 > de live-edit). **80% dos campos** saem da extração determinística (auditável, sem IA)
-> nas 15 seguradoras de amostra. Portabilidade para o plugin WordPress está no
+> nas 15 seguradoras de amostra. O empacotamento como app desktop está no
 > [`TODO.md`](TODO.md).
 
 ---
@@ -152,8 +160,14 @@ PDFs escaneados (sem camada de texto) ainda não são suportados — o MinerU fo
 
 ---
 
-## Deploy como plugin WordPress
+## Distribuição (em desenvolvimento)
 
-O empacotamento em `.zip` e a instalação via *WP Admin → Plugins → Adicionar novo →
-Enviar plugin* estão descritos em [`docs/spec.md`](docs/spec.md). O login usará o
-sistema de usuários do próprio WordPress. (Em desenvolvimento — ver `TODO.md`.)
+Aplicativo instalável para Windows e macOS: janela nativa, ícone próprio, sem
+navegador à vista. A extração continua **inteira na máquina** — nenhum PDF sai dela.
+Um backend mínimo em n8n cuida de três coisas: quem pode entrar (whitelist revogável),
+a ponte para a OpenAI (a chave nunca vai no executável) e qual é a versão vigente.
+
+Perfis novos de seguradora chegam **sem reinstalar**: o app os baixa na abertura.
+
+Desenho completo em
+[`docs/superpowers/specs/2026-07-25-app-desktop-design.md`](docs/superpowers/specs/2026-07-25-app-desktop-design.md).

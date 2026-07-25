@@ -59,15 +59,23 @@ Backlog de melhorias e correções. Marque `[x]` ao concluir.
       declara o que é idêntico entre as ofertas. Falta o usuário escolher a oferta.
 - [ ] Suporte real a comparar 3–5 propostas (hoje em beta).
 
-## Produção (WordPress)
+## Produção — app desktop (v0.4 → V1)
 
-- [ ] Portar motor de extração + perfis para PHP (`smalot/pdfparser`) — incluindo
-      segmentos por bloco, `kv`/`row`/`under`, `section`, guardas e normalização.
-- [ ] Login via usuários nativos do WordPress; persistência em `wp_options`.
-- [ ] Empacotador `.zip` do plugin instalável.
-- [ ] Modo Visual/recortes: usar Imagick quando disponível; senão, o fac-símile de
-      fragmentos (o cliente já degrada para o fac-símile quando não há imagem).
-- [ ] PDF escaneado: MinerU como serviço externo (não roda em hospedagem compartilhada).
+WordPress foi **descartado**: o `smalot/pdfparser` não expõe o agrupamento por bloco do
+PDF, que é o que levou a extração de 33% para 81%. Medição em
+[`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md). O motor fica em Python e o
+invólucro vira um aplicativo instalável — design em
+[`docs/superpowers/specs/2026-07-25-app-desktop-design.md`](docs/superpowers/specs/2026-07-25-app-desktop-design.md).
+
+- [ ] **Portão de validação:** protótipo `pywebview` provando janela nativa, ícone na
+      taskbar/Dock, fluxo completo e — o que decide — **exportação do PDF no macOS**
+      (WebKit, não Chromium). Reprovando, a casca vira Electron.
+- [ ] Backend n8n: `/auth` (whitelist, token), `/ia` (proxy da OpenAI) e `/versao`.
+- [ ] App consumindo o backend; falha fechado quando não confirma o acesso.
+- [ ] Atualização automática: perfis/interface a quente, motor via instalador.
+- [ ] Build no GitHub Actions (matriz Windows + macOS) gerando `.exe` e `.dmg`.
+- [ ] Reorganizar o repositório: motor entra, `orcamentos-newa/` vira a interface do app.
+- [ ] PDF escaneado: MinerU como serviço externo (segue fora do escopo por ora).
 
 ## Geral
 

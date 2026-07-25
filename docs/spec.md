@@ -1,5 +1,11 @@
 # Especificação — Orçamentos NEWA
 
+> **Desatualizado a partir de 2026-07-25 na parte de distribuição.** O alvo deixou de
+> ser o plugin WordPress e passou a ser um **app desktop** (Windows/macOS) com backend
+> n8n — motivo em [`avaliacao-smalot.md`](avaliacao-smalot.md), desenho em
+> [`superpowers/specs/2026-07-25-app-desktop-design.md`](superpowers/specs/2026-07-25-app-desktop-design.md).
+> As seções de **extração, schema, garantias e estética** continuam válidas.
+
 ## Objetivo
 Aplicativo (plugin WordPress + servidor de dev local) que recebe PDFs de cotação de
 seguro auto de várias seguradoras e gera uma **Proposta de Seguro** comparativa de 2
