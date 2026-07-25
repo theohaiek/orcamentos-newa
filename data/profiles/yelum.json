@@ -1,0 +1,284 @@
+{
+  "id": "yelum",
+  "label": "Yelum Seguros — Cotação YELUM AUTO PERFIL",
+  "match": ["yelum auto perfil", "yelum seguros s.a."],
+  "priority": 10,
+  "fields": {
+    "seguradora": {
+      "pick": "text_regex",
+      "regex": "Yelum Seguros S\\.A\\.",
+      "replace": [["^.+$", "Yelum Seguros S.A."]]
+    },
+
+    "segurado": {
+      "pick": "under",
+      "anchor": "Nome do Segurado",
+      "page": 1,
+      "section": "DADOS DO PROPONENTE",
+      "section_end": "DADOS DO CORRETOR",
+      "xlo": 6,
+      "xhi": 40,
+      "dy": 14,
+      "not_regex": "\\d",
+      "min_len": 6,
+      "max_words": 8
+    },
+
+    "veiculo": {
+      "pick": "under",
+      "anchor": "Marca/Tipo do Veículo",
+      "page": 1,
+      "xlo": 12,
+      "xhi": 40,
+      "dy": 14,
+      "min_len": 6,
+      "not_regex": "^\\d{6}-\\d\\b|^[A-Z]{3}\\d[A-Z0-9]\\d{2}$"
+    },
+
+    "ano_modelo": {
+      "pick": "under",
+      "anchor": "Ano Fabricação/Modelo",
+      "page": 1,
+      "xlo": 12,
+      "xhi": 40,
+      "dy": 14,
+      "regex": "\\d{4}/\\d{4}"
+    },
+
+    "data_proposta": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "Criado por:\\s*\\S+\\s*-\\s*(\\d{1,2}/\\d{1,2}/\\d{4})",
+      "replace": [["^(\\d)/", "0\\1/"], ["/(\\d)/", "/0\\1/"]],
+      "format": "date_iso"
+    },
+
+    "validade": [
+      {
+        "pick": "text_regex",
+        "page": 2,
+        "regex": "validade at[ée] o dia\\s+(\\d{2}/\\d{2}/\\d{4})",
+        "format": "date_iso"
+      },
+      {
+        "pick": "text_regex",
+        "page": 2,
+        "regex": "^(\\d{2}/\\d{2}/\\d{4}),\\s*e podem sofrer",
+        "format": "date_iso"
+      }
+    ],
+
+    "uso_veiculo": {
+      "pick": "under",
+      "anchor": "Utilização",
+      "exact": true,
+      "page": 1,
+      "xlo": 6,
+      "xhi": 40,
+      "dy": 12,
+      "regex": "(PARTICULAR|COMERCIAL)",
+      "format": "upper"
+    },
+
+    "condutores_18_26": {
+      "pick": "under",
+      "anchor": "Deseja estender cobertura",
+      "page": 2,
+      "xlo": 6,
+      "xhi": 40,
+      "dy": 12,
+      "regex": "^(Sim|N[ãa]o)",
+      "format": "simnao"
+    },
+
+    "cep_circulacao": {
+      "pick": "under",
+      "anchor": "CEP de Pernoite",
+      "page": 1,
+      "xlo": 12,
+      "xhi": 40,
+      "dy": 14,
+      "regex": "\\d{5}-?\\d{3}|\\d{5}",
+      "format": "cep"
+    },
+
+    "colisao_incendio_roubo": {
+      "pick": "row",
+      "anchor": "COMPREENSIVA",
+      "page": 1,
+      "section": "Coberturas Contratadas",
+      "section_end": "Classe de Bônus",
+      "xmax": 400,
+      "regex": "(VMR\\s+FIPE\\s*x\\s*\\d{1,3}\\s*%|\\d{1,3}\\s*%\\s*FIPE|Valor de Mercado Referenciado|Valor Determinado)"
+    },
+
+    "rcf_danos_materiais": {
+      "pick": "row",
+      "anchor": "DANOS MATERIAIS",
+      "page": 1,
+      "section": "Coberturas Contratadas",
+      "section_end": "Classe de Bônus",
+      "xmax": 400,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 1000,
+      "format": "currency"
+    },
+
+    "rcf_danos_pessoais": {
+      "pick": "row",
+      "anchor": "DANOS CORPORAIS",
+      "page": 1,
+      "section": "Coberturas Contratadas",
+      "section_end": "Classe de Bônus",
+      "xmax": 400,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 1000,
+      "format": "currency"
+    },
+
+    "diarias_carro_reserva": [
+      {
+        "pick": "text_regex",
+        "page": 1,
+        "regex": "CARRO RESERVA\\s*-\\s*(\\d{1,3}\\s*DIAS)",
+        "format": "title"
+      },
+      {
+        "pick": "text_regex",
+        "page": 1,
+        "regex": "carro reserva.{0,90}?por (\\d{1,3} dias)",
+        "format": "title"
+      }
+    ],
+
+    "franquia_veiculo": {
+      "pick": "row",
+      "anchor": "COMPREENSIVA",
+      "page": 1,
+      "section": "Coberturas Contratadas",
+      "section_end": "Classe de Bônus",
+      "xmin": 500,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 100,
+      "format": "currency"
+    },
+
+    "para_brisas": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "Para-?brisa\\s*R\\$\\s*([\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+
+    "farois": [
+      {
+        "pick": "text_regex",
+        "page": 1,
+        "regex": "Far[oó]is\\s*R\\$\\s*([\\d.]+,\\d{2})",
+        "format": "currency"
+      },
+      {
+        "pick": "text_regex",
+        "page": 1,
+        "regex": "^R\\$\\s*([\\d.]+,\\d{2})\\s*/\\s*Lanternas",
+        "format": "currency"
+      }
+    ],
+
+    "lanternas": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "Lanternas\\s*R\\$\\s*([\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+
+    "retrovisores": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "Retrovisores\\s*R\\$\\s*([\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+
+    "reparo_para_choque": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "Reparo de Para-?choque\\s*R\\$\\s*([\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+
+    "reparo_amassados": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "Martelinho de Ouro\\s*(R\\$\\s*[\\d.]+,\\d{2}\\s*para o teto e\\s*R\\$\\s*[\\d.]+,\\d{2}\\s*para demais\\s*pe[çc]as)",
+      "replace": [["R\\$\\s*([\\d.]+,\\d{2})\\s*para o teto e\\s*R\\$\\s*([\\d.]+,\\d{2})\\s*para demais\\s*pe[çc]as", "R$ \\1 (teto) / R$ \\2 (demais peças)"]]
+    },
+
+    "protecao_pneu_roda_suspensao": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "Franquia Pneu\\s*R\\$\\s*([\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+
+    "a_vista": [
+      {
+        "pick": "under",
+        "anchor": "Prêmio Total",
+        "page": 1,
+        "xlo": 12,
+        "xhi": 40,
+        "dy": 14,
+        "regex": "[\\d.]+,\\d{2}",
+        "min_value": 100,
+        "format": "currency"
+      },
+      {
+        "pick": "row",
+        "anchor": "À vista",
+        "exact": true,
+        "page": 1,
+        "xmin": 100,
+        "xmax": 260,
+        "regex": "[\\d.]+,\\d{2}",
+        "min_value": 100,
+        "format": "currency"
+      }
+    ],
+
+    "parc_4x": {
+      "pick": "row",
+      "anchor": "1 + 3",
+      "exact": true,
+      "page": 1,
+      "xmin": 360,
+      "xmax": 460,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 10,
+      "format": "currency"
+    },
+
+    "parc_6x": {
+      "pick": "row",
+      "anchor": "1 + 5",
+      "exact": true,
+      "page": 1,
+      "xmin": 360,
+      "xmax": 460,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 10,
+      "format": "currency"
+    },
+
+    "parc_10x": {
+      "pick": "row",
+      "anchor": "1 + 9",
+      "exact": true,
+      "page": 1,
+      "xmin": 360,
+      "xmax": 460,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 10,
+      "format": "currency"
+    }
+  }
+}

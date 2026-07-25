@@ -441,6 +441,7 @@
       '<div class="prov-hint muted">Clique no ponto de origem de cada campo para ver <b>de onde veio no PDF</b>. ' +
       '<span class="dotlegend"><span class="prov-dot method-profile"></span>Perfil</span>' +
       '<span class="dotlegend"><span class="prov-dot method-ai"></span>IA verificada</span>' +
+      '<span class="dotlegend"><span class="prov-dot method-absent"></span>Não consta no PDF</span>' +
       '<span class="dotlegend"><span class="prov-dot method-low"></span>Confirmar</span></div>' +
       '<div class="orca-doc" id="doc">' + buildDoc(P, true) + "</div>";
     $("#provtoggle").querySelectorAll("[data-pv]").forEach((b) => (b.onclick = () => {
@@ -477,12 +478,14 @@
     if (!p) return null;
     if (p.method === "profile") return "method-profile";
     if (p.method === "manual") return "method-manual";
+    if (p.method === "ausente") return "method-absent";
     if (p.method === "ai") return p.confidence === "baixa" ? "method-low" : "method-ai";
     return "method-ai";
   }
   const METHOD_LABEL = {
     "method-profile": ["Perfil determinístico", "Extraído por posição/rótulo — origem exata."],
     "method-ai": ["IA verificada", "Interpretado por IA e confirmado no texto do PDF."],
+    "method-absent": ["Não consta no PDF", "A cobertura não é mencionada no documento — registrada como não contratada."],
     "method-low": ["IA — confirme", "Valor da IA não localizado literalmente no PDF. Confira."],
     "method-manual": ["Manual", "Atribuído manualmente a partir do painel Não mapeado."],
   };
@@ -1427,7 +1430,13 @@
       '<div class="stagger" style="max-width:640px;display:flex;flex-direction:column;gap:20px">' +
       '<div class="card pad"><h3 style="margin-bottom:14px">Integração de IA (OpenAI)</h3>' +
       '<div class="field"><label>Chave da API' + (cfg.has_openai_key ? " (configurada — deixe vazio para manter)" : "") + '</label><input class="input" id="cok" type="password" placeholder="sk-..."></div>' +
-      '<div class="field" style="margin-top:12px"><label>Modelo</label><input class="input" id="cmodel" value="' + esc(cfg.model || "gpt-5-mini") + '"></div>' +
+      '<div class="field" style="margin-top:12px"><label>Modelo</label><input class="input" id="cmodel" value="' + esc(cfg.model || "gpt-5-nano") + '"></div>' +
+      '<div class="field" style="margin-top:12px"><label>Esforço de raciocínio (modelos gpt-5 / o-series)</label>' +
+      '<select class="input" id="ceffort">' +
+      ["minimal", "low", "medium", "high"].map(function (e) {
+        return '<option value="' + e + '"' + ((cfg.reasoning_effort || "low") === e ? " selected" : "") + ">" + e + "</option>";
+      }).join("") + "</select>" +
+      '<div class="hint">A IA só preenche o que os perfis não capturaram. <b>low</b> é o equilíbrio medido entre cobertura e tempo; <b>minimal</b> é mais rápido porém deixa mais campos vazios.</div></div>' +
       '<button class="btn" id="savecfg" style="margin-top:16px">Salvar integração</button></div>' +
       '<div class="card pad"><h3 style="margin-bottom:14px">Dados da corretora (usados na capa da proposta)</h3>' +
       field("cnome", "Nome", co.nome || "NEWA Seguros") +
@@ -1438,7 +1447,7 @@
       field("cend", "Endereço", co.endereco || "") +
       '<button class="btn" id="savecor" style="margin-top:16px">Salvar dados da corretora</button></div></div>';
     $("#savecfg").onclick = async () => {
-      const body = { model: $("#cmodel").value.trim() };
+      const body = { model: $("#cmodel").value.trim(), reasoning_effort: $("#ceffort").value };
       const k = $("#cok").value.trim(); if (k) body.openai_key = k;
       await api("/config", { method: "POST", body }); toast("Integração salva.", "ok"); $("#cok").value = ""; await loadShared();
     };

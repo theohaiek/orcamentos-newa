@@ -1,0 +1,313 @@
+{
+  "id": "hdi",
+  "label": "HDI Seguros — Hdi Auto Perfil / Cálculo (Novo Negócio)",
+  "match": [
+    "hdi auto perfil",
+    "hdi seguros s.a."
+  ],
+  "priority": 10,
+  "fields": {
+    "seguradora": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "HDI SEGUROS S\\.A\\.",
+      "format": "upper"
+    },
+    "segurado": {
+      "pick": "kv",
+      "anchor": "Proponente",
+      "exact": true,
+      "page": 1,
+      "not_regex": "\\d",
+      "min_len": 6,
+      "max_words": 8
+    },
+    "principal_condutor": {
+      "pick": "kv",
+      "anchor": "Nome do Condutor",
+      "exact": true,
+      "page": 1,
+      "not_regex": "\\d",
+      "min_len": 6,
+      "max_words": 8
+    },
+    "veiculo": [
+      {
+        "pick": "kv",
+        "anchor": "Veículo",
+        "exact": true,
+        "page": 1,
+        "regex": "^\\d+\\s*-\\s*(.+?)\\s*\\(FIPE",
+        "not_regex": "FIPE|CHASSI|PLACA",
+        "min_len": 8,
+        "max_words": 16
+      },
+      {
+        "pick": "kv",
+        "anchor": "Veículo",
+        "exact": true,
+        "page": 1,
+        "not_regex": "FIPE|CHASSI|PLACA",
+        "min_len": 8,
+        "max_words": 16,
+        "format": "strip_code"
+      }
+    ],
+    "ano_modelo": {
+      "pick": "kv",
+      "anchor": "Ano/Modelo",
+      "exact": true,
+      "page": 1,
+      "regex": "\\d{4}/\\d{4}"
+    },
+    "data_proposta": {
+      "pick": "text_regex",
+      "page": 2,
+      "regex": "(\\d{1,2} DE (?:JANEIRO|FEVEREIRO|MAR[ÇC]O|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO) DE \\d{4})",
+      "replace": [
+        [
+          " DE JANEIRO DE ",
+          "/01/"
+        ],
+        [
+          " DE FEVEREIRO DE ",
+          "/02/"
+        ],
+        [
+          " DE MAR[ÇC]O DE ",
+          "/03/"
+        ],
+        [
+          " DE ABRIL DE ",
+          "/04/"
+        ],
+        [
+          " DE MAIO DE ",
+          "/05/"
+        ],
+        [
+          " DE JUNHO DE ",
+          "/06/"
+        ],
+        [
+          " DE JULHO DE ",
+          "/07/"
+        ],
+        [
+          " DE AGOSTO DE ",
+          "/08/"
+        ],
+        [
+          " DE SETEMBRO DE ",
+          "/09/"
+        ],
+        [
+          " DE OUTUBRO DE ",
+          "/10/"
+        ],
+        [
+          " DE NOVEMBRO DE ",
+          "/11/"
+        ],
+        [
+          " DE DEZEMBRO DE ",
+          "/12/"
+        ],
+        [
+          "^(\\d)/",
+          "0\\1/"
+        ]
+      ],
+      "format": "date_iso"
+    },
+    "validade": {
+      "pick": "text_regex",
+      "page": 2,
+      "regex": "COTA[ÇC][ÃA]O V[ÁA]LIDA AT[ÉE] (\\d{2}/\\d{2}/\\d{4})",
+      "format": "date_iso"
+    },
+    "uso_veiculo": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "Utiliza[çc][ãa]o do Ve[íi]culo\\s+(.+)$",
+      "min_len": 6,
+      "max_words": 8
+    },
+    "condutores_18_26": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "Cob Demais Condutores.*?\\b(Sim|N[ãa]o)\\s*$",
+      "format": "simnao"
+    },
+    "cep_circulacao": [
+      {
+        "pick": "kv",
+        "anchor": "CEP de Circulação",
+        "exact": true,
+        "page": 1,
+        "regex": "\\d{5}-?\\d{3}",
+        "format": "cep"
+      },
+      {
+        "pick": "kv",
+        "anchor": "CEP Pernoite",
+        "exact": true,
+        "page": 1,
+        "regex": "\\d{5}-?\\d{3}",
+        "format": "cep"
+      }
+    ],
+    "colisao_incendio_roubo": {
+      "pick": "row",
+      "anchor": "CASCO",
+      "exact": true,
+      "page": 1,
+      "xmax": 340,
+      "regex": "\\d{1,3}(?:,\\d{2})?\\s*%\\s*FIPE",
+      "replace": [
+        [
+          ",00\\s*%",
+          "%"
+        ]
+      ],
+      "format": "upper"
+    },
+    "rcf_danos_materiais": {
+      "pick": "row",
+      "anchor": "RCF-V DANOS MATERIAIS",
+      "exact": true,
+      "page": 1,
+      "xmax": 340,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 10000,
+      "format": "currency"
+    },
+    "rcf_danos_pessoais": {
+      "pick": "row",
+      "anchor": "RCF-V DANOS CORPORAIS",
+      "exact": true,
+      "page": 1,
+      "xmax": 340,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 10000,
+      "format": "currency"
+    },
+    "morte_pessoal_passageiro": {
+      "pick": "row",
+      "anchor": "APP MORTE",
+      "exact": true,
+      "page": 1,
+      "xmax": 340,
+      "regex": "[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+    "acidente_pessoal_passageiro": {
+      "pick": "row",
+      "anchor": "APP INVALIDEZ PERMANENTE",
+      "exact": true,
+      "page": 1,
+      "xmax": 340,
+      "regex": "[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+    "km_reboque": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "Guincho Sem Limite de KM",
+      "replace": [
+        [
+          "^.+$",
+          "KM Ilimitado"
+        ]
+      ]
+    },
+    "diarias_carro_reserva": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "(\\d{1,2}) DIAS CR\\b",
+      "replace": [
+        [
+          "^(\\d+)$",
+          "\\1 dias"
+        ]
+      ]
+    },
+    "franquia_veiculo": {
+      "pick": "row",
+      "anchor": "CASCO",
+      "exact": true,
+      "page": 1,
+      "xmin": 480,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 200,
+      "format": "currency"
+    },
+    "para_brisas": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "\\(\\*1\\)Vidros com franquia de R\\$ ?([\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+    "farois": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "\\(\\*2\\)Farol com franquia de R\\$ ?([\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+    "lanternas": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "\\bLanterna com franquia de R\\$ ?([\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+    "retrovisores": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "\\bRetrovisor com franquia de R\\$ ?([\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+    "protecao_pneu_roda_suspensao": {
+      "pick": "text_regex",
+      "page": 1,
+      "regex": "Prote[çc][ãa]o Contra Buracos com franquia de R\\$ ?([\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+    "a_vista": {
+      "pick": "row",
+      "anchor": "TOTAL À VISTA",
+      "starts_with": true,
+      "page": 1,
+      "xmax": 400,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 100,
+      "format": "currency"
+    },
+    "parc_4x": {
+      "pick": "row",
+      "anchor": "4 x",
+      "exact": true,
+      "xmax": 155,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 10,
+      "format": "currency"
+    },
+    "parc_6x": {
+      "pick": "row",
+      "anchor": "6 x",
+      "exact": true,
+      "xmax": 155,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 10,
+      "format": "currency"
+    },
+    "parc_10x": {
+      "pick": "row",
+      "anchor": "10 x",
+      "exact": true,
+      "xmax": 155,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 10,
+      "format": "currency"
+    }
+  }
+}

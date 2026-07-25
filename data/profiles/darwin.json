@@ -1,0 +1,309 @@
+{
+  "id": "darwin",
+  "label": "Darwin Seguros — Cotação de seguro (rótulo em cima / valor embaixo)",
+  "priority": 10,
+  "match": [
+    "darwin seguros",
+    "Código SUSEP: 04537",
+    "Cotação de seguro"
+  ],
+  "fields": {
+    "seguradora": {
+      "pick": "text_regex",
+      "page": 6,
+      "regex": "(Darwin Seguros)\\s+S\\.?A\\.?"
+    },
+    "segurado": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Segurado",
+      "exact": true,
+      "dy": 60,
+      "xlo": 12,
+      "xhi": 120,
+      "min_len": 6,
+      "max_words": 8,
+      "not_regex": "\\d"
+    },
+    "principal_condutor": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Condutor",
+      "exact": true,
+      "dy": 60,
+      "xlo": 12,
+      "xhi": 120,
+      "min_len": 6,
+      "max_words": 8,
+      "not_regex": "\\d"
+    },
+    "veiculo": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Veículo",
+      "exact": true,
+      "dy": 60,
+      "xlo": 12,
+      "xhi": 120,
+      "min_len": 6,
+      "max_words": 12,
+      "not_regex": "\\d{6}-\\d|^\\d{4}\\s*/"
+    },
+    "ano_modelo": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Ano do veículo",
+      "exact": true,
+      "dy": 60,
+      "xlo": 12,
+      "xhi": 120,
+      "regex": "\\d{4}\\s*/\\s*\\d{4}",
+      "replace": [
+        [
+          "\\s*/\\s*",
+          "/"
+        ]
+      ]
+    },
+    "uso_veiculo": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Tipo de uso",
+      "exact": true,
+      "dy": 60,
+      "xlo": 12,
+      "xhi": 120,
+      "regex": "uso\\s+(pessoal|comercial)",
+      "replace": [
+        [
+          "^pessoal$",
+          "PARTICULAR"
+        ],
+        [
+          "^comercial$",
+          "COMERCIAL"
+        ]
+      ],
+      "format": "upper"
+    },
+    "cep_circulacao": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "CEP de pernoite",
+      "exact": true,
+      "dy": 60,
+      "xlo": 12,
+      "xhi": 120,
+      "regex": "\\d{5}-?\\d{3}",
+      "format": "cep"
+    },
+    "condutores_18_26": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Reside com condutor menor de 26 anos",
+      "starts_with": true,
+      "dy": 60,
+      "xlo": 12,
+      "xhi": 120,
+      "regex": "^(sim|n[ãa]o)$",
+      "format": "simnao"
+    },
+    "data_proposta": {
+      "pick": "under",
+      "page": 2,
+      "anchor": "Data de transmissão",
+      "exact": true,
+      "dy": 60,
+      "xlo": 12,
+      "xhi": 120,
+      "regex": "\\d{2}/\\d{2}/\\d{4}",
+      "format": "date_iso"
+    },
+    "validade": {
+      "pick": "under",
+      "page": 2,
+      "anchor": "Validade da cotação",
+      "exact": true,
+      "dy": 60,
+      "xlo": 12,
+      "xhi": 120,
+      "regex": "\\d{2}/\\d{2}/\\d{4}",
+      "format": "date_iso"
+    },
+    "colisao_incendio_roubo": {
+      "pick": "row",
+      "page": 2,
+      "anchor": "Colisão (Perda Total e Parcial)",
+      "exact": true,
+      "ytol": 12,
+      "xmax": 1500,
+      "regex": "\\d{1,3}%\\s*d[ae]\\s*tabela\\s*de\\s*refer[êe]ncia"
+    },
+    "rcf_danos_materiais": {
+      "pick": "row",
+      "page": 2,
+      "anchor": "Danos Materiais",
+      "exact": true,
+      "ytol": 12,
+      "xmax": 1500,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 20000,
+      "format": "currency"
+    },
+    "rcf_danos_pessoais": {
+      "pick": "row",
+      "page": 2,
+      "anchor": "Danos Corporais",
+      "exact": true,
+      "ytol": 12,
+      "xmax": 1500,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 20000,
+      "format": "currency"
+    },
+    "morte_pessoal_passageiro": {
+      "pick": "row",
+      "page": 2,
+      "anchor": "Morte",
+      "exact": true,
+      "ytol": 12,
+      "xmax": 1500,
+      "regex": "(N[ãa]o contratada|R\\$\\s*[\\d.]+,\\d{2})"
+    },
+    "km_reboque": {
+      "pick": "text_regex",
+      "page": 2,
+      "anchor": "Guincho",
+      "regex": "guincho\\s*(\\d{2,4})\\s*km",
+      "replace": [
+        [
+          "^(\\d+)$",
+          "\\1 KM"
+        ]
+      ]
+    },
+    "diarias_carro_reserva": {
+      "pick": "text_regex",
+      "page": 2,
+      "anchor": "Carro reserva",
+      "regex": "carro reserva\\s*-\\s*(\\d{1,3}\\s*di[áa]s?)"
+    },
+    "franquia_veiculo": {
+      "pick": "row",
+      "page": 2,
+      "anchor": "Perdas parciais",
+      "exact": true,
+      "ytol": 12,
+      "xmax": 1500,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 50,
+      "format": "currency"
+    },
+    "para_brisas": {
+      "pick": "row",
+      "page": 4,
+      "anchor": "Parabrisa",
+      "exact": true,
+      "ytol": 12,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 1,
+      "format": "currency"
+    },
+    "farois": {
+      "pick": "row",
+      "page": 4,
+      "anchor": "Farol Conv.",
+      "exact": true,
+      "ytol": 12,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 1,
+      "format": "currency"
+    },
+    "lanternas": {
+      "pick": "row",
+      "page": 4,
+      "anchor": "Lanterna Conv.",
+      "exact": true,
+      "ytol": 12,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 1,
+      "format": "currency"
+    },
+    "retrovisores": {
+      "pick": "row",
+      "page": 4,
+      "anchor": "Retrovisor",
+      "exact": true,
+      "ytol": 12,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 1,
+      "format": "currency"
+    },
+    "protecao_pneu_roda_suspensao": {
+      "pick": "row",
+      "page": 4,
+      "anchor": "RPS (Rodas, Pneus e Suspensão)",
+      "exact": true,
+      "ytol": 12,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 1,
+      "format": "currency"
+    },
+    "a_vista": [
+      {
+        "pick": "row",
+        "page": 2,
+        "anchor": "Valor total a partir de",
+        "ytol": 12,
+        "xmin": 1700,
+        "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+        "min_value": 100,
+        "format": "currency"
+      },
+      {
+        "pick": "row",
+        "page": 3,
+        "anchor": "À vista",
+        "exact": true,
+        "ytol": 12,
+        "xmax": 700,
+        "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+        "min_value": 100,
+        "format": "currency"
+      }
+    ],
+    "parc_4x": {
+      "pick": "row",
+      "page": 3,
+      "anchor": "4 parcelas",
+      "exact": true,
+      "ytol": 12,
+      "xmax": 700,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 10,
+      "format": "currency"
+    },
+    "parc_6x": {
+      "pick": "row",
+      "page": 3,
+      "anchor": "6 parcelas",
+      "exact": true,
+      "ytol": 12,
+      "xmax": 700,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 10,
+      "format": "currency"
+    },
+    "parc_10x": {
+      "pick": "row",
+      "page": 3,
+      "anchor": "10 parcelas",
+      "exact": true,
+      "ytol": 12,
+      "xmax": 700,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 10,
+      "format": "currency"
+    }
+  }
+}

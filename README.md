@@ -1,4 +1,4 @@
-# Orçamentos NEWA · v0.2
+# Orçamentos NEWA · v0.3
 
 Aplicativo para **gerar propostas comparativas de seguro auto** a partir dos PDFs de
 cotação de várias seguradoras. Você envia os PDFs, o app reconhece e normaliza os
@@ -9,9 +9,10 @@ pronta para enviar ao cliente.
 Distribuído como **plugin do WordPress** e também executável localmente para
 desenvolvimento/edição ao vivo do visual.
 
-> **Status:** v0.2 — funcional ponta a ponta em desenvolvimento local (servidor Python
-> de live-edit). Portabilidade para o plugin WordPress e mais perfis de seguradora estão
-> no [`TODO.md`](TODO.md).
+> **Status:** v0.3 — funcional ponta a ponta em desenvolvimento local (servidor Python
+> de live-edit). **80% dos campos** saem da extração determinística (auditável, sem IA)
+> nas 15 seguradoras de amostra. Portabilidade para o plugin WordPress está no
+> [`TODO.md`](TODO.md).
 
 ---
 
@@ -22,7 +23,7 @@ desenvolvimento/edição ao vivo do visual.
   *fallback* para o que o perfil não resolver, com o valor **verificado no texto do PDF**.
 - **Proveniência de cada dado:** todo campo carrega sua origem (página, posição, trecho,
   rótulo-âncora). Na revisão, um ponto colorido indica o método (Perfil / IA verificada /
-  Confirmar).
+  Não consta no PDF / Confirmar).
 - **Assistente de conferência por etapas** (abre automaticamente antes de gerar): mostra,
   seção por seção, o **resultado final no centro** e os **PDFs de origem de cada lado**,
   com a região de cada valor **marcada em marca-texto** (modo *Destaque na página*, com
@@ -54,12 +55,15 @@ app-orçamentos-newa/
 ├── data/
 │   ├── insurers.json           # registro de seguradoras (cores, logos, keywords)
 │   └── profiles/               # perfis de extração determinística por layout
-│       ├── tradicional.json    # Porto / Itaú / Azul / Mitsui
-│       ├── autoperfil.json     # Aliro / Yelum
-│       ├── suhai.json
-│       └── _generic.json       # campos de rótulo inequívoco (qualquer layout)
+│       ├── aliro.json  allianz.json  azul.json  bradesco.json  darwin.json
+│       ├── hdi.json    itau.json     justos.json  mapfre.json  mitsui.json
+│       ├── porto.json  suhai.json    tokio.json   yelum.json   zurich.json
+│       ├── tradicional.json    # família: sistema Porto/Itaú/Azul/Mitsui
+│       ├── autoperfil.json     # família: sistema Aliro/Yelum/HDI
+│       └── _generic.json       # dicionário de rótulos (roda em qualquer layout)
 ├── docs/
-│   └── spec.md                 # especificação, arquitetura e decisões
+│   ├── spec.md                 # especificação, arquitetura e decisões
+│   └── avaliacao-mineru.md     # MinerU x PyMuPDF: medição e decisão
 ├── orcamentos-newa/            # === o plugin WordPress (pasta que vira o .zip) ===
 │   └── assets/
 │       ├── app.css             # design system da UI
@@ -99,22 +103,42 @@ injeta *cache-busting*, então um F5 normal já pega a versão nova.
 
 ## Como funciona a extração (pipeline em camadas)
 
-1. **Tokenização posicional** (PyMuPDF): cada palavra do PDF com sua página e posição.
+1. **Tokenização posicional** (PyMuPDF), em três níveis. O nível que importa são os
+   **segmentos** — tokens agrupados pelo *bloco/linha do próprio PDF*, que é o que separa
+   `Veículo:` de `Valor de Mercado Referenciado` e de `Dias Paralisação:` numa mesma linha
+   visual de formulário multi-coluna. Ler "o valor à direita do rótulo" pela linha visual
+   invadia a coluna vizinha — era a causa raiz da baixa cobertura e dos valores errados.
 2. **Camada 1 — perfil determinístico** (`data/profiles/*.json`): âncora por rótulo +
-   captura posicional (`right`/`below`/`table_cell`/`text_regex`) + validação por regex.
-   Gera a proveniência exata. Perfis por família de layout: `tradicional`
-   (Porto/Itaú/Azul/Mitsui), `autoperfil` (Aliro/Yelum), `suhai`.
-3. **Camada 1b — genérico** (`_generic.json`): preenche campos de **rótulo inequívoco**
-   (RCF, CEP, vidros, faróis, lanternas, retrovisores, reboque, carro reserva) em
-   **qualquer** layout, com guardas contra valor errado.
+   captura posicional (`kv`/`row`/`under`/`right`/`below`/`table_cell`/`text_regex`),
+   recorte por **seção**, **guardas** (`min_value`, `not_regex`, `reject`) e
+   **normalização** (moeda BR, data ISO, CEP, Sim/Não). Um campo pode ter várias specs
+   alternativas. Gera a proveniência exata. **Um perfil dedicado por seguradora**
+   (15 autorados) e perfis de família para layouts do mesmo emissor.
+3. **Camada 1b — genérico** (`_generic.json`): dicionário de rótulos que roda em
+   **qualquer** layout, só para os campos que sobraram — é o que dá cobertura numa
+   seguradora ainda sem perfil próprio.
 4. **Camada 2 — validação/drift:** campo sem âncora/regex cai para a IA; muitos campos
    falhando sinalizam "layout pode ter mudado".
 5. **Camada 3 — IA (fallback):** só para os campos restantes (schema reduzido → rápido);
    o valor é localizado no texto do PDF (string-match). Sem match → confiança baixa e o
-   campo fica pendente. Modelo padrão: **`gpt-5-mini`** (`reasoning_effort=minimal`).
+   campo é destacado para conferência. Coberturas que o documento simplesmente **não
+   menciona** viram "Não consta no PDF" (cinza) em vez de alerta vermelho.
+   Modelo padrão: **`gpt-5-nano`**, com esforço de raciocínio ajustável em *Configurações*.
 
-PDFs escaneados (sem texto) ainda não são suportados — fallback de visão previsto no
-[`TODO.md`](TODO.md).
+### Cobertura medida (15 PDFs de amostra, 31 campos)
+
+| | determinístico (verde) | IA verificada | a confirmar | vazio |
+|---|---|---|---|---|
+| antes (v0.2) | 33% | — | — | — |
+| **agora (v0.3)** | **80%** | 4% | 1% | 15% |
+
+Concordância dos valores determinísticos com o consenso de 18 configurações de modelo:
+**97%** (era 82%) — e as divergências restantes são o perfil estando *mais* certo que os
+modelos (ex.: a seguradora de uma cotação Azul é "Azul Seguros", não a congênere
+"Allianz Seguros" que aparece no cabeçalho).
+
+PDFs escaneados (sem camada de texto) ainda não são suportados — o MinerU foi avaliado e
+é a recomendação para esse caso: ver [`docs/avaliacao-mineru.md`](docs/avaliacao-mineru.md).
 
 ---
 

@@ -1,0 +1,319 @@
+{
+  "id": "porto",
+  "label": "Porto Seguro — Orçamento de Seguro (Auto Tradicional)",
+  "priority": 10,
+  "match": [
+    "Porto Seguro Cia de Seguros Gerais",
+    "Orçamento de Seguro"
+  ],
+  "match_not": [
+    "Azul Tradicional",
+    "Itaú Tradicional",
+    "Mitsui Sumitomo Seguros"
+  ],
+  "fields": {
+    "seguradora": {
+      "pick": "text_regex",
+      "page": 4,
+      "anchor": "Porto Seguro Cia de Seguros Gerais",
+      "regex": "Porto Seguro"
+    },
+    "segurado": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Segurado(a)",
+      "exact": true,
+      "at_x": 30,
+      "xlo": 12,
+      "xhi": 60,
+      "dy": 30,
+      "not_regex": "\\d",
+      "min_len": 6,
+      "max_words": 7
+    },
+    "principal_condutor": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Condutor",
+      "exact": true,
+      "at_x": 29,
+      "xlo": 12,
+      "xhi": 60,
+      "dy": 30,
+      "not_regex": "\\d",
+      "min_len": 6,
+      "max_words": 7
+    },
+    "veiculo": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Veículo",
+      "exact": true,
+      "occurrence": 2,
+      "at_x": 206,
+      "xlo": 12,
+      "xhi": 40,
+      "dy": 30,
+      "regex": "^\\d+\\s*(?:-\\s*)+(.+)$",
+      "min_len": 5,
+      "max_words": 12
+    },
+    "ano_modelo": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Ano Fabricação",
+      "at_x": 455,
+      "xlo": 12,
+      "xhi": 40,
+      "dy": 30,
+      "regex": "\\d{4}\\s*/\\s*\\d{4}",
+      "replace": [
+        [
+          "\\s*/\\s*",
+          "/"
+        ]
+      ]
+    },
+    "data_proposta": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Realizado",
+      "exact": true,
+      "at_x": 197,
+      "xlo": 12,
+      "xhi": 40,
+      "dy": 30,
+      "regex": "\\d{2}/\\d{2}/\\d{4}",
+      "format": "date_iso"
+    },
+    "validade": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Validade",
+      "exact": true,
+      "at_x": 268,
+      "xlo": 12,
+      "xhi": 40,
+      "dy": 30,
+      "regex": "\\d{2}/\\d{2}/\\d{4}",
+      "format": "date_iso"
+    },
+    "uso_veiculo": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Tipo de uso",
+      "exact": true,
+      "at_x": 29,
+      "xlo": 12,
+      "xhi": 40,
+      "dy": 30,
+      "regex": "particular|comercial|t[aá]xi|aluguel",
+      "format": "upper"
+    },
+    "cep_circulacao": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "CEP de pernoite",
+      "exact": true,
+      "at_x": 203,
+      "xlo": 12,
+      "xhi": 40,
+      "dy": 30,
+      "regex": "\\d{5}-?\\d{3}",
+      "format": "cep"
+    },
+    "colisao_incendio_roubo": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Compreensiva (Colisão",
+      "starts_with": true,
+      "at_x": 29,
+      "xlo": 12,
+      "xhi": 40,
+      "dy": 20,
+      "regex": "-\\s*(Valor de \\w+)",
+      "replace": [
+        [
+          "valor de mercado",
+          "Valor de Mercado"
+        ]
+      ],
+      "format": "sentence"
+    },
+    "franquia_veiculo": {
+      "pick": "row",
+      "page": 1,
+      "anchor": "Compreensiva (Colisão",
+      "starts_with": true,
+      "xmin": 340,
+      "xmax": 470,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 100,
+      "format": "currency"
+    },
+    "rcf_danos_materiais": {
+      "pick": "row",
+      "page": 1,
+      "anchor": "RCF-V Danos Materiais",
+      "exact": true,
+      "xmin": 240,
+      "xmax": 340,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 10000,
+      "format": "currency"
+    },
+    "rcf_danos_pessoais": {
+      "pick": "row",
+      "page": 1,
+      "anchor": "RCF-V Danos Corporais",
+      "exact": true,
+      "xmin": 240,
+      "xmax": 340,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 10000,
+      "format": "currency"
+    },
+    "protecao_pneu_roda_suspensao": {
+      "pick": "under",
+      "page": 1,
+      "anchor": "Roda, Pneu e Suspensão",
+      "exact": true,
+      "at_x": 362,
+      "xlo": 12,
+      "xhi": 40,
+      "dy": 20,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+    "reparo_amassados": {
+      "pick": "row",
+      "page": 1,
+      "anchor": "Pequenos Reparos",
+      "starts_with": true,
+      "xmin": 340,
+      "xmax": 470,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+    "reparo_para_choque": {
+      "pick": "row",
+      "page": 1,
+      "anchor": "Troca de Para-choque",
+      "starts_with": true,
+      "xmin": 340,
+      "xmax": 470,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+    "para_brisas": {
+      "pick": "text_regex",
+      "page": 1,
+      "anchor": "Franquias: Vidros Para-Brisa",
+      "regex": "Para-Brisa[^:]{0,40}:\\s*(R\\$ ?[\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+    "farois": {
+      "pick": "text_regex",
+      "page": 1,
+      "anchor": "Faróis Convencionais",
+      "regex": "Convencionais, Milha e Neblina:\\s*(R\\$ ?[\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+    "lanternas": {
+      "pick": "text_regex",
+      "page": 1,
+      "anchor": "Lanternas Convencionais",
+      "regex": "^Convencionais:\\s*(R\\$ ?[\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+    "retrovisores": {
+      "pick": "text_regex",
+      "page": 1,
+      "anchor": "Retrovisores",
+      "regex": "Retrovisores\\s*:\\s*(R\\$ ?[\\d.]+,\\d{2})",
+      "format": "currency"
+    },
+    "km_reboque": {
+      "pick": "text_regex",
+      "page": 2,
+      "anchor": "Assistência Km ilimitado",
+      "regex": "Assist[êe]ncia (Km ilimitado)",
+      "replace": [
+        [
+          "km ilimitado",
+          "KM Ilimitado"
+        ]
+      ]
+    },
+    "assistencia_residencial": {
+      "pick": "text_regex",
+      "page": 2,
+      "anchor": "Serviços para a Residência",
+      "regex": "Servi[çc]os para a Resid[êe]ncia",
+      "replace": [
+        [
+          "^.+$",
+          "Sim"
+        ]
+      ]
+    },
+    "diarias_carro_reserva": {
+      "pick": "text_regex",
+      "page": 2,
+      "anchor": "Carro Reserva",
+      "regex": "Carro Reserva[^0-9]{0,40}(\\d{1,2}\\s*dias?)"
+    },
+    "a_vista": {
+      "pick": "row",
+      "page": 2,
+      "anchor": "Valor total",
+      "exact": true,
+      "xmin": 470,
+      "regex": "R\\$\\s*[\\d.]+,\\d{2}",
+      "min_value": 100,
+      "format": "currency"
+    },
+    "parc_4x": {
+      "pick": "under",
+      "page": 3,
+      "section": "TODAS CARTÃO DE CRÉDITO - DEMAIS BANDEIRAS",
+      "section_end": "TODAS DÉBITO C. CORRENTE",
+      "anchor": "4x",
+      "exact": true,
+      "xlo": 12,
+      "xhi": 20,
+      "dy": 40,
+      "regex": "^[\\d.]+,\\d{2}$",
+      "min_value": 10,
+      "format": "currency"
+    },
+    "parc_6x": {
+      "pick": "under",
+      "page": 3,
+      "section": "TODAS CARTÃO DE CRÉDITO - DEMAIS BANDEIRAS",
+      "section_end": "TODAS DÉBITO C. CORRENTE",
+      "anchor": "6x",
+      "exact": true,
+      "xlo": 12,
+      "xhi": 20,
+      "dy": 40,
+      "regex": "^[\\d.]+,\\d{2}$",
+      "min_value": 10,
+      "format": "currency"
+    },
+    "parc_10x": {
+      "pick": "under",
+      "page": 3,
+      "section": "TODAS CARTÃO DE CRÉDITO - DEMAIS BANDEIRAS",
+      "section_end": "TODAS DÉBITO C. CORRENTE",
+      "anchor": "10x",
+      "exact": true,
+      "xlo": 12,
+      "xhi": 20,
+      "dy": 40,
+      "regex": "^[\\d.]+,\\d{2}$",
+      "min_value": 10,
+      "format": "currency"
+    }
+  }
+}

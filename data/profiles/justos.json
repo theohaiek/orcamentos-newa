@@ -1,0 +1,253 @@
+{
+  "id": "justos",
+  "label": "Justos Seguros — Seu plano / Detalhes do seu plano",
+  "priority": 10,
+  "match": ["JUSTOS SEGUROS S.A.", "CONDIÇÕES DE PAGAMENTO PARA O PLANO ANUAL"],
+  "fields": {
+    "seguradora": {
+      "pick": "text_regex",
+      "anchor": "JUSTOS SEGUROS S.A.",
+      "regex": "JUSTOS SEGUROS S\\.A\\.",
+      "format": "title"
+    },
+
+    "segurado": [
+      {
+        "pick": "regex_near",
+        "anchor": "Nome CPF Classe",
+        "span": 2,
+        "regex": "b[oô]nus\\s+(.+)$",
+        "not_regex": "\\bcep\\b|pernoite|placa|marca|corretor|susep|seu ve",
+        "min_len": 6,
+        "replace": [["\\d[\\d.\\-]*", " "]],
+        "format": "upper"
+      },
+      {
+        "pick": "regex_near",
+        "anchor": "Nome CPF Classe",
+        "span": 1,
+        "regex": "b[oô]nus\\s+(.+)$",
+        "min_len": 6,
+        "replace": [["\\d[\\d.\\-]*", " "]],
+        "format": "upper"
+      }
+    ],
+
+    "veiculo": {
+      "pick": "regex_near",
+      "anchor": "Placa Marca Ano",
+      "span": 3,
+      "regex": "\\bAno\\s+\\S+\\s+(.+?\\s+(?:19|20)\\d{2}\\s+Modelo\\s+.+)$",
+      "not_regex": "ESPECIFICA|CORRETOR|USO E",
+      "min_len": 6,
+      "replace": [["\\s+(?:19|20)\\d{2}\\s+Modelo\\s+", " "]]
+    },
+
+    "ano_modelo": {
+      "pick": "under",
+      "anchor": "Ano",
+      "exact": true,
+      "at_x": 386,
+      "xlo": 20,
+      "xhi": 60,
+      "dy": 30,
+      "regex": "\\b(?:19|20)\\d{2}\\b"
+    },
+
+    "validade": {
+      "pick": "text_regex",
+      "anchor": "Condições válidas até",
+      "regex": "v[aá]lidas at[eé]\\s+(\\d{2}/\\d{2}/\\d{4})"
+    },
+
+    "uso_veiculo": {
+      "pick": "text_regex",
+      "anchor": "motorista profissional",
+      "regex": "N[aã]o utiliza o ve[ií]culo como motorista profissional",
+      "replace": [["^.+$", "PARTICULAR"]]
+    },
+
+    "cep_circulacao": {
+      "pick": "under",
+      "anchor": "CEP Pernoite",
+      "exact": true,
+      "at_x": 30,
+      "xlo": 15,
+      "xhi": 80,
+      "dy": 30,
+      "regex": "\\d{5}-?\\d{3}",
+      "format": "cep"
+    },
+
+    "colisao_incendio_roubo": {
+      "pick": "text_regex",
+      "anchor": "Tabela FIPE",
+      "regex": "Pagamos\\s+(\\d{1,3}%)\\*?\\s*da Tabela FIPE",
+      "replace": [["%", "% FIPE"]]
+    },
+
+    "rcf_danos_materiais": {
+      "pick": "under",
+      "anchor": "DANOS MATERIAIS PARA TERCEIROS",
+      "at_x": 306,
+      "xlo": 20,
+      "xhi": 120,
+      "dy": 40,
+      "regex": "\\d{1,3}(?:\\.\\d{3})+,\\d{2}",
+      "min_value": 10000,
+      "format": "currency"
+    },
+
+    "rcf_danos_pessoais": {
+      "pick": "under",
+      "anchor": "DANOS CORPORAIS PARA TERCEIROS",
+      "at_x": 306,
+      "xlo": 20,
+      "xhi": 120,
+      "dy": 40,
+      "regex": "\\d{1,3}(?:\\.\\d{3})+,\\d{2}",
+      "min_value": 10000,
+      "format": "currency"
+    },
+
+    "km_reboque": {
+      "pick": "text_regex",
+      "anchor": "Guincho KM ilimitado",
+      "regex": "KM ilimitado",
+      "replace": [["ilimitado", "Ilimitado"], ["km", "KM"]]
+    },
+
+    "diarias_carro_reserva": {
+      "pick": "under",
+      "anchor": "CARRO RESERVA",
+      "at_x": 30,
+      "xlo": 15,
+      "xhi": 150,
+      "dy": 40,
+      "regex": "\\d{1,3}\\s*dias?"
+    },
+
+    "franquia_veiculo": {
+      "pick": "text_regex",
+      "anchor": "Franquia para perda parcial",
+      "regex": "Franquia de\\s+R\\$\\s*([\\d.]+,\\d{2})\\s+para perda parcial",
+      "min_value": 100,
+      "format": "currency"
+    },
+
+    "para_brisas": {
+      "pick": "under",
+      "anchor": "Para-brisa",
+      "exact": true,
+      "at_x": 30,
+      "xlo": 10,
+      "xhi": 60,
+      "dy": 25,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "farois": {
+      "pick": "under",
+      "anchor": "Farol Convencional",
+      "exact": true,
+      "at_x": 309,
+      "xlo": 15,
+      "xhi": 90,
+      "dy": 25,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "lanternas": {
+      "pick": "under",
+      "anchor": "Lanterna Convencional",
+      "exact": true,
+      "at_x": 309,
+      "xlo": 15,
+      "xhi": 90,
+      "dy": 25,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "retrovisores": [
+      {
+        "pick": "under",
+        "anchor": "Retrovisor Convencional",
+        "exact": true,
+        "at_x": 30,
+        "xlo": 10,
+        "xhi": 60,
+        "dy": 25,
+        "regex": "R\\$ ?[\\d.]+,\\d{2}",
+        "format": "currency"
+      },
+      {
+        "pick": "under",
+        "anchor": "Retrovisor LED",
+        "exact": true,
+        "at_x": 30,
+        "xlo": 10,
+        "xhi": 60,
+        "dy": 25,
+        "regex": "R\\$ ?[\\d.]+,\\d{2}",
+        "format": "currency"
+      }
+    ],
+
+    "reparo_amassados": {
+      "pick": "under",
+      "anchor": "LATARIA E PINTURA",
+      "at_x": 30,
+      "xlo": 15,
+      "xhi": 100,
+      "dy": 60,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "protecao_pneu_roda_suspensao": {
+      "pick": "under",
+      "anchor": "CONTRA BURACOS",
+      "at_x": 306,
+      "xlo": 15,
+      "xhi": 120,
+      "dy": 60,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "a_vista": {
+      "pick": "text_regex",
+      "anchor": "À VISTA",
+      "regex": "R\\$ ?([\\d.]+,\\d{2})\\s+[ÀàAa]\\s*VISTA",
+      "min_value": 100,
+      "format": "currency"
+    },
+
+    "parc_4x": {
+      "pick": "text_regex",
+      "anchor": "4x de",
+      "regex": "(?<!\\d)4x de R\\$ ?([\\d.]+,\\d{2})",
+      "min_value": 10,
+      "format": "currency"
+    },
+
+    "parc_6x": {
+      "pick": "text_regex",
+      "anchor": "6x de",
+      "regex": "(?<!\\d)6x de R\\$ ?([\\d.]+,\\d{2})",
+      "min_value": 10,
+      "format": "currency"
+    },
+
+    "parc_10x": {
+      "pick": "text_regex",
+      "anchor": "10x de",
+      "regex": "(?<!\\d)10x de R\\$ ?([\\d.]+,\\d{2})",
+      "min_value": 10,
+      "format": "currency"
+    }
+  }
+}

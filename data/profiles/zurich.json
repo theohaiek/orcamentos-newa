@@ -1,0 +1,247 @@
+{
+  "id": "zurich",
+  "label": "Zurich Minas Brasil — Demonstrativo de Cálculo (Zurich Automóvel)",
+  "priority": 10,
+  "match": ["ZURICH AUTOMÓVEL", "ZURICH MINAS BRASIL SEGUROS"],
+  "fields": {
+    "seguradora": {
+      "pick": "text_regex",
+      "anchor": "Zurich",
+      "regex": "\\b(ZURICH)\\s+(?:AUTOM|MINAS)"
+    },
+
+    "segurado": {
+      "pick": "kv",
+      "anchor": "Nome completo/Razão social",
+      "exact": true,
+      "not_regex": "\\d",
+      "min_len": 5
+    },
+
+    "veiculo": {
+      "pick": "kv",
+      "anchor": "Veículo",
+      "exact": true,
+      "min_len": 5,
+      "not_regex": "\\bFIPE\\b|\\d{9,}"
+    },
+
+    "ano_modelo": {
+      "pick": "kv",
+      "anchor": "Ano Modelo",
+      "exact": true,
+      "regex": "\\d{4}(?:/\\d{4})?"
+    },
+
+    "principal_condutor": {
+      "pick": "kv",
+      "anchor": "Condutor principal",
+      "exact": true,
+      "not_regex": "\\d",
+      "min_len": 5
+    },
+
+    "data_proposta": {
+      "pick": "kv",
+      "anchor": "Data do cálculo",
+      "exact": true,
+      "regex": "\\d{2}/\\d{2}/\\d{4}",
+      "format": "date_iso"
+    },
+
+    "validade": {
+      "pick": "kv",
+      "anchor": "Cálculo válido até o dia",
+      "exact": true,
+      "regex": "\\d{2}/\\d{2}/\\d{4}",
+      "format": "date_iso"
+    },
+
+    "uso_veiculo": {
+      "pick": "kv",
+      "anchor": "Uso veículo",
+      "exact": true,
+      "replace": [["^\\s*APENAS LAZER.*SEM FINALIDADE COMERCIAL\\s*$", "PARTICULAR"]],
+      "format": "upper"
+    },
+
+    "condutores_18_26": {
+      "pick": "text_regex",
+      "anchor": "condutores habilitados com menos de 25 anos",
+      "regex": "menos de 25 anos\\?\\s*(Sim|N[ãa]o)",
+      "format": "simnao"
+    },
+
+    "cep_circulacao": {
+      "pick": "kv",
+      "anchor": "CEP do local de pernoite do veículo",
+      "exact": true,
+      "regex": "\\d{5}-?\\d{3}",
+      "format": "cep"
+    },
+
+    "colisao_incendio_roubo": {
+      "pick": "row",
+      "anchor": "Veículo - Colisão/Incêndio/Roubo",
+      "exact": true,
+      "page": 1,
+      "xmin": 290,
+      "xmax": 370,
+      "regex": "\\d{1,3}\\s*%\\s*FIPE"
+    },
+
+    "rcf_danos_materiais": {
+      "pick": "row",
+      "anchor": "RCV - Danos Materiais",
+      "exact": true,
+      "page": 1,
+      "xmin": 290,
+      "xmax": 370,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 10000,
+      "format": "currency"
+    },
+
+    "rcf_danos_pessoais": {
+      "pick": "row",
+      "anchor": "RCV - Danos Corporais",
+      "exact": true,
+      "page": 1,
+      "xmin": 290,
+      "xmax": 370,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 10000,
+      "format": "currency"
+    },
+
+    "km_reboque": {
+      "pick": "text_regex",
+      "anchor": "Reboque",
+      "regex": "(\\d{2,4}\\s*Km)\\s+de\\s+Reboque",
+      "format": "upper"
+    },
+
+    "diarias_carro_reserva": {
+      "pick": "text_regex",
+      "anchor": "CARRO RESERVA",
+      "regex": "CARRO RESERVA.{0,30}?(\\d{1,3}\\s*DIAS)",
+      "format": "title"
+    },
+
+    "franquia_veiculo": {
+      "pick": "row",
+      "anchor": "Veículo - Colisão/Incêndio/Roubo",
+      "exact": true,
+      "page": 1,
+      "xmin": 380,
+      "xmax": 470,
+      "regex": "[\\d.]+,\\d{2}",
+      "min_value": 100,
+      "format": "currency"
+    },
+
+    "para_brisas": {
+      "pick": "row",
+      "anchor": "Para-brisa",
+      "exact": true,
+      "page": 1,
+      "xmin": 380,
+      "xmax": 470,
+      "regex": "[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "farois": {
+      "pick": "row",
+      "anchor": "Farol Convencional",
+      "exact": true,
+      "page": 1,
+      "xmin": 380,
+      "xmax": 470,
+      "regex": "[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "lanternas": {
+      "pick": "row",
+      "anchor": "Lanterna Convencional",
+      "exact": true,
+      "page": 1,
+      "xmin": 380,
+      "xmax": 470,
+      "regex": "[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "retrovisores": {
+      "pick": "row",
+      "anchor": "Retrovisor Externo",
+      "exact": true,
+      "page": 1,
+      "xmin": 380,
+      "xmax": 470,
+      "regex": "[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "reparo_para_choque": {
+      "pick": "row",
+      "anchor": "Reparo de Para-choque",
+      "exact": true,
+      "page": 1,
+      "xmin": 380,
+      "xmax": 470,
+      "regex": "[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "reparo_amassados": {
+      "pick": "row",
+      "anchor": "Martelinho",
+      "starts_with": true,
+      "page": 1,
+      "xmin": 380,
+      "xmax": 470,
+      "regex": "[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "protecao_pneu_roda_suspensao": {
+      "pick": "row",
+      "anchor": "Pneu e Roda",
+      "exact": true,
+      "page": 1,
+      "xmin": 380,
+      "xmax": 470,
+      "regex": "[\\d.]+,\\d{2}",
+      "format": "currency"
+    },
+
+    "a_vista": [
+      {
+        "pick": "under",
+        "anchor": "Prêmio Total (R$)",
+        "page": 2,
+        "occurrence": 1,
+        "xlo": 20,
+        "xhi": 80,
+        "dy": 20,
+        "regex": "[\\d.]+,\\d{2}",
+        "min_value": 100,
+        "format": "currency"
+      },
+      {
+        "pick": "under",
+        "anchor": "Prêmio Total (R$)",
+        "page": 2,
+        "occurrence": 2,
+        "xlo": 20,
+        "xhi": 80,
+        "dy": 25,
+        "regex": "[\\d.]+,\\d{2}",
+        "min_value": 100,
+        "format": "currency"
+      }
+    ]
+  }
+}

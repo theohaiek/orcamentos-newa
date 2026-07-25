@@ -31,25 +31,57 @@ POST /api/users / PUT|DELETE /api/users/<u>  (admin)
 POST /api/extract  (multipart PDF)        -> {fields, missing, insurer_id}
 ```
 
-## Extração / normalização — pipeline de 3 camadas (implementado, piloto)
-Ver o plano completo em `docs/superpowers/specs` (extração determinística + proveniência).
-1. **Tokenização posicional** (PyMuPDF `get_text("words")`) → palavras/linhas com bbox
-   (`extract_engine.py`, dev). No plugin: `smalot/pdfparser` (`getDataTM`) em PHP.
+## Extração / normalização — pipeline de 3 camadas
+
+### Modelo de dados do PDF (3 níveis)
+A tokenização (PyMuPDF `get_text("words")`) produz três níveis, e **escolher o nível
+certo foi a diferença entre 33% e ~80% de captura determinística**:
+
+- **tokens** — palavra + bbox.
+- **segments** — tokens agrupados por **(bloco, linha) do próprio PDF**. É o nível que
+  separa `Veículo:` de `Valor de Mercado Referenciado` e de `Dias Paralisação:` numa
+  MESMA linha visual de formulário multi-coluna. Sem ele, capturar "o valor à direita do
+  rótulo" invadia a coluna vizinha — a causa raiz da baixa cobertura e de valores errados.
+- **lines** — tokens reagrupados por faixa de y (linha visual, atravessa colunas), com
+  agrupamento adaptativo pela altura da fonte (tabelas em que o valor é impresso 2-3pt
+  acima do rótulo, como a MAPFRE, passam a formar uma linha só).
+
+> Armadilha resolvida: "mesma linha" é **distância entre centros verticais**, nunca
+> sobreposição de caixas — as caixas de fonte de linhas vizinhas quase se tocam, e o
+> teste de sobreposição capturava a linha de cima (off-by-one em tabelas de parcelas:
+> `parc_4x` devolvia o valor de 3x).
+
+1. **Tokenização posicional** (`extract_engine.py`, dev).
+   No plugin: `smalot/pdfparser` (`getDataTM`) em PHP.
 2. **Camada 1 — determinístico por perfil** (`data/profiles/*.json`): âncora por rótulo +
-   captura posicional (`pick`: right/below/table_cell/regex_near) + validação por regex.
-   Cada campo carrega **proveniência** (página, bbox, trecho, âncora). Perfil piloto:
-   `tradicional` (layout Newa/Allianz single-offer — cobre porto, itau e afins).
-3. **Camada 2 — validação/drift**: campo sem âncora/regex → cai para IA; muitos campos
+   captura posicional + validação por regex + **guardas** (`min_value`, `not_regex`,
+   `reject`, `max_words`) e **normalização** (`currency`, `date_iso`, `cep`, `simnao`,
+   `strip_code`). Estratégias (`pick`): `kv`, `row`, `under`, `right`, `below`,
+   `table_cell`, `regex_near`, `text_regex`. Um campo pode declarar uma **lista de specs
+   alternativas** — a primeira que casar vence. Cada campo carrega **proveniência**
+   (página, bbox, trecho, âncora). Perfis dedicados por seguradora (`priority: 10`) e
+   perfis de família/sistema (`priority: 0`) para layouts do mesmo emissor.
+3. **Camada 1b — genérico** (`_generic.json`): dicionário de rótulos que roda em
+   **qualquer** layout, depois do perfil específico e só para os campos que sobraram.
+   É o que dá cobertura em seguradoras ainda sem perfil próprio.
+4. **Camada 2 — validação/drift**: campo sem âncora/regex → cai para IA; muitos campos
    falhando → flag `drift` ("layout pode ter mudado").
-4. **Camada 3 — IA (fallback)** só para os campos restantes; o valor é **ancorado e
+5. **Camada 3 — IA (fallback)** só para os campos restantes; o valor é **ancorado e
    verificado por string-match** nos tokens (`method:"ai"`, `confidence:"verificada"`);
    sem match → `confidence:"baixa"` e o campo fica pendente.
-5. Seguradora detectada por palavras-chave no conteúdo (+ nome do arquivo).
+   Modelo padrão `gpt-5-nano` com `reasoning_effort` configurável (padrão `low`);
+   se a API recusar o valor do esforço, a chamada degrada em vez de falhar.
+6. Seguradora detectada em ordem de força da evidência: **campo `seguradora` extraído** →
+   nome do arquivo → texto inteiro (último recurso, vence o marcador mais longo).
+   Necessário porque cotações citam parceiros e a **seguradora congênere** da renovação:
+   um orçamento Porto/Itaú/Azul/Mitsui do mesmo sistema traz "Seguradora: Allianz
+   Seguros" (a anterior) e a companhia real está no cabeçalho do produto / rodapé.
 6. **Proveniência na UI**: ponto colorido por método em cada cápsula → popup com origem
    nos modos **Visual** (mapa de fragmentos da página, sem raster — portável ao WP) e
    **Texto**, alternáveis por toggle no topo. Painel **"Deixado de fora"** lista valores
    em R$ do PDF não capturados, com opção de promover a um campo.
-7. **Fallback previsto (não implementado):** PDF escaneado → visão da IA.
+8. **Fallback previsto (não implementado):** PDF escaneado → **MinerU** (avaliado e
+   recomendado só para esse caso; ver [`avaliacao-mineru.md`](avaliacao-mineru.md)).
 
 Payload `/api/extract`: `{insurer_id, profile_used, profile_id, ai_used, drift, fields,
 provenance, missing, unmapped, pages[fragments]}`.
