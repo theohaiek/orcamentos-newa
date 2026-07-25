@@ -116,7 +116,11 @@ injeta *cache-busting*, então um F5 normal já pega a versão nova.
    (15 autorados) e perfis de família para layouts do mesmo emissor.
 3. **Camada 1b — genérico** (`_generic.json`): dicionário de rótulos que roda em
    **qualquer** layout, só para os campos que sobraram — é o que dá cobertura numa
-   seguradora ainda sem perfil próprio.
+   seguradora ainda sem perfil próprio. Ele é **derivado dos perfis dedicados** e passa
+   por dois filtros: um teste *leave-one-out* (a regra é validada num layout que ela
+   nunca viu) e um portão que descarta qualquer regra cujo valor divirja do perfil
+   dedicado. Campos que erram em layout novo **ficam de fora** e vão para a IA — é
+   preferível um campo âmbar revisado a um campo verde errado.
 4. **Camada 2 — validação/drift:** campo sem âncora/regex cai para a IA; muitos campos
    falhando sinalizam "layout pode ter mudado".
 5. **Camada 3 — IA (fallback):** só para os campos restantes (schema reduzido → rápido);
@@ -127,15 +131,21 @@ injeta *cache-busting*, então um F5 normal já pega a versão nova.
 
 ### Cobertura medida (15 PDFs de amostra, 31 campos)
 
-| | determinístico (verde) | IA verificada | a confirmar | vazio |
+| | determinístico (verde) | IA verificada / não consta | a confirmar (vermelho) | vazio |
 |---|---|---|---|---|
-| antes (v0.2) | 33% | — | — | — |
-| **agora (v0.3)** | **80%** | 4% | 1% | 15% |
+| antes (v0.2) | 33% | 65% | | |
+| **agora (v0.3)** | **81%** | 11% | **0%** | 8% |
 
 Concordância dos valores determinísticos com o consenso de 18 configurações de modelo:
 **97%** (era 82%) — e as divergências restantes são o perfil estando *mais* certo que os
 modelos (ex.: a seguradora de uma cotação Azul é "Azul Seguros", não a congênere
 "Allianz Seguros" que aparece no cabeçalho).
+
+**Seguradora ainda sem perfil próprio:** medido em *leave-one-out* (cada layout avaliado
+por um dicionário genérico construído sem ele), a camada genérica sozinha entrega ~7 de 31
+campos. É pouco de propósito: as regras que erravam em layout novo foram removidas. Para
+uma seguradora nova, o caminho de subir a cobertura é **autorar o perfil dela** — está
+descrito em [`docs/perfis.md`](docs/perfis.md).
 
 PDFs escaneados (sem camada de texto) ainda não são suportados — o MinerU foi avaliado e
 é a recomendação para esse caso: ver [`docs/avaliacao-mineru.md`](docs/avaliacao-mineru.md).

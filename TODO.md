@@ -21,9 +21,15 @@ Backlog de melhorias e correções. Marque `[x]` ao concluir.
 - [x] **15 perfis dedicados** (aliro, allianz, azul, bradesco, darwin, hdi, itau, justos,
       mapfre, mitsui, porto, suhai, tokio, yelum, zurich), cada um validado campo a campo
       contra o PDF de origem.
-- [x] **Cobertura determinística: 33% → 80%** (10,3 → 24,7 campos de 31 por arquivo).
+- [x] **Camada genérica reconstruída**: derivada dos perfis dedicados, filtrada por
+      *leave-one-out* (regra validada num layout que nunca viu) e por um portão que
+      descarta regra divergente do perfil dedicado. 33 generalizações inseguras foram
+      barradas — entre elas `reparo_para_choque` devolvendo R$ 15.000,00 (uma LMI) e
+      `franquia_veiculo` devolvendo um prêmio. Sozinha entrega 11,5/31 nos layouts
+      conhecidos e ~6,7/31 num layout inédito, sem erro.
+- [x] **Cobertura determinística: 33% → 81%** (10,3 → 25,1 campos de 31 por arquivo).
       Concordância com o consenso de 18 configurações de modelo: **82% → 97%**, sem
-      nenhum valor verde incorreto.
+      nenhum valor verde incorreto. Campos "a confirmar" (vermelhos): **de ~2% para 0%**.
 - [x] **Verdes errados que existiam foram corrigidos** — `farois`/`lanternas` devolviam
       a LMI da cobertura de vidros (R$ 25.000,00) em vez da franquia; `para_brisas`
       devolvia o vidro traseiro; `km_reboque` do HDI dizia "100 km" onde o PDF diz
