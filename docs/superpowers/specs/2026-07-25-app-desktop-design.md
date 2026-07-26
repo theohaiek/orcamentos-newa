@@ -4,17 +4,21 @@ Data: 2026-07-25 · Substitui o plano de distribuição como plugin WordPress.
 
 ## Por que mudou
 
-O produto seria um plugin WordPress, o que obrigava a reescrever o motor de extração
-em PHP. A medição enterrou essa via: `smalot/pdfparser`, a única biblioteca PHP que
-roda em hospedagem compartilhada, não expõe o agrupamento por **bloco** do PDF — o
-nível que levou a extração determinística de 33% para 81%. Medido nos 15 PDFs de
-amostra: 2 arquivos sem posição alguma, 2 fragmentados caractere a caractere, um com
-41% do texto perdido, e só 75% dos rótulos-âncora dos perfis localizáveis mesmo com
-reconstrução de linhas por coordenada. Detalhes em [`avaliacao-smalot.md`](../../avaliacao-smalot.md).
+> **A premissa deste documento caiu (2026-07-26).** Ele foi escrito partindo de que o
+> motor não podia ser portado para PHP. Aquela medição estava errada — o defeito era do
+> script de teste, não da biblioteca. Refeita: o motor roda em PHP entregando **93% da
+> cobertura**, com os perfis intocados. Ver [`avaliacao-smalot.md`](../../avaliacao-smalot.md).
+>
+> O desenho abaixo continua válido como **uma** das opções de distribuição, e a
+> arquitetura (acesso revogável, chave fora do executável, atualização de perfis a
+> quente) segue desejável. O que não vale mais é o argumento de que ela era a única
+> saída técnica. A escolha entre plugin WordPress e app desktop voltou a ser uma
+> decisão de produto.
 
-A decisão é manter o motor em Python — que já funciona e está validado — e mudar o
-invólucro: de plugin WordPress para **aplicativo desktop instalável**, com um backend
-mínimo em n8n para acesso e chave de API.
+O produto seria um plugin WordPress, o que obrigava a reescrever o motor de extração
+em PHP — trabalho real, mas viável. A alternativa aqui desenhada mantém o motor em
+Python e muda o invólucro: de plugin WordPress para **aplicativo desktop instalável**,
+com um backend mínimo em n8n para acesso e chave de API.
 
 ## Objetivo
 
@@ -45,7 +49,16 @@ existindo, mas escuta em **porta efêmera em `127.0.0.1`** — não é alcançá
 A janela é nativa; o usuário não vê navegador nem URL.
 
 Ficam locais: PyMuPDF, os perfis, a interface, os hashes de senha, a configuração e os
-PDFs enviados. **Nenhum PDF sai da máquina** — apenas os poucos campos que precisam de IA.
+PDFs enviados.
+
+> **Correção (2026-07-26).** Este documento afirmava que "nenhum PDF sai da máquina —
+> apenas os poucos campos que precisam de IA". **Isso é falso na implementação atual.**
+> O parâmetro `only_keys` restringe apenas o *esquema de saída* pedido ao modelo; o que
+> é enviado é o **texto integral do documento**, com nome, CPF, CEP, placa e chassi. Só
+> os campos que o perfil não resolveu deixam de sair porque não são pedidos — mas o
+> texto todo trafega. Enquanto não houver redação dos dados pessoais antes do envio, o
+> desenho tem que assumir que o conteúdo do PDF vai para a OpenAI e, no caminho com
+> proxy, também para o servidor n8n.
 
 ### VPS (n8n)
 

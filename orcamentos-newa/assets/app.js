@@ -386,10 +386,25 @@
           filename: files[i].name, insurer_id, fields: r.fields, missing: r.missing || [],
           provenance: r.provenance || {}, unmapped: r.unmapped || [], pages: r.pages || [], doc_id: r.doc_id || null,
           profile_used: !!r.profile_used, profile_id: r.profile_id || null, ai_used: !!r.ai_used, drift: !!r.drift,
+          avisos: r.avisos || [], ofertas: r.ofertas || null, ai_error: r.ai_error || null,
+          paginas_sem_texto: r.paginas_sem_texto || [],
         });
-        row.className = "st done"; row.innerHTML = I.check + " ok";
+        const avisos = r.avisos || [];
+        const graves = avisos.filter(a => a.nivel === "erro");
+        row.className = graves.length ? "st warn" : "st done";
+        row.innerHTML = (graves.length ? I.alert + " atenção" : I.check + " ok");
         const src = r.profile_used ? "perfil " + (r.profile_id || "") : "IA";
         meta.textContent = insurerById(insurer_id).name + " · " + src + " · " + (r.missing || []).length + " a revisar";
+        // Avisos aparecem AQUI, no card do arquivo — antes eram calculados no
+        // servidor e nunca exibidos: falha de IA ficava igual a "campo não existe".
+        if (avisos.length) {
+          const box = document.createElement("div");
+          box.className = "up-avisos";
+          box.innerHTML = avisos.map(a =>
+            `<div class="up-aviso ${a.nivel}">${I.alert}` +
+            `<span>${esc(a.mensagem)}</span></div>`).join("");
+          $("#p" + i).insertAdjacentElement("afterend", box);
+        }
       } catch (e) {
         errors.push(files[i].name);
         row.className = "st err"; row.innerHTML = I.alert + " falhou";
@@ -419,7 +434,12 @@
     const P = S.proposal; let n = 0;
     tpl().info.forEach((r) => { if (r.show && r.req && !String(P.info[r.key] || "").trim()) n++; });
     const keys = dataKeys(false);
-    P.columns.forEach((col) => keys.forEach((k) => { if (!String(col.fields[k] || "").trim()) n++; }));
+    P.columns.forEach((col) => keys.forEach((k) => {
+      if (!String(col.fields[k] || "").trim()) { n++; return; }
+      // Campo preenchido mas NÃO confirmado conta como pendência: entregar um valor
+      // que o sistema não conseguiu confirmar é exatamente o que não pode acontecer.
+      if ((col.provenance[k] || {}).confidence === "baixa") n++;
+    }));
     return n;
   }
 
@@ -627,7 +647,18 @@
       el.addEventListener("blur", () => {
         const v = el.textContent.trim();
         if (el.dataset.info != null) S.proposal.info[el.dataset.info] = v;
-        else if (el.dataset.k != null) S.proposal.columns[+el.dataset.c].fields[el.dataset.k] = v;
+        else if (el.dataset.k != null) {
+          const col = S.proposal.columns[+el.dataset.c], k = el.dataset.k;
+          const mudou = String(col.fields[k] || "") !== v;
+          col.fields[k] = v;
+          // Editar à mão É a confirmação: o campo deixa de ser "a confirmar" e passa
+          // a constar como manual — sem isto, um campo revisado continuava bloqueando.
+          if (mudou || (col.provenance[k] || {}).confidence === "baixa") {
+            col.provenance[k] = { value: v, method: "manual", page: (col.provenance[k] || {}).page || null,
+                                  bbox: (col.provenance[k] || {}).bbox || null,
+                                  snippet: v, anchor: null, confidence: "manual" };
+          }
+        }
         else if (el.dataset.obs != null) S.proposal.obs = Array.from(el.querySelectorAll("li")).map((li) => li.textContent.trim()).filter(Boolean);
         refreshCap(el); updateNote();
       });

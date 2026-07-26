@@ -6,15 +6,16 @@ campos automaticamente, confere **de onde veio cada dado** e exporta uma
 **Proposta de Seguro** de 2 páginas (capa personalizada + comparativo lado a lado),
 pronta para enviar ao cliente.
 
-Será distribuído como **aplicativo desktop instalável** (Windows e macOS), com um
-backend mínimo em n8n para controle de acesso e chave de API. Hoje roda localmente
-para desenvolvimento/edição ao vivo do visual.
+Hoje roda localmente para desenvolvimento/edição ao vivo do visual. A forma de
+distribuição — **plugin WordPress** ou **aplicativo desktop instalável** — está em
+aberto; as duas são tecnicamente viáveis.
 
-> **Mudança de rumo (2026-07-25):** a distribuição como plugin WordPress foi
-> descartada — o `smalot/pdfparser`, única biblioteca PHP viável em hospedagem
-> compartilhada, não expõe o agrupamento por bloco do PDF, que é justamente o que
-> levou a extração determinística de 33% para 81%. Medição em
-> [`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md); novo desenho em
+> **Sobre a distribuição (2026-07-26):** uma medição anterior concluiu que o motor não
+> poderia ser portado para PHP e descartou o WordPress. **Aquela medição estava errada**
+> — o defeito era do script de teste, não da biblioteca. Refeita: o motor roda em PHP
+> com **93% da cobertura** que tem em Python, com os perfis intocados. Números e o custo
+> real do port em [`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md). O desenho do
+> app desktop continua válido como alternativa:
 > [`docs/superpowers/specs/2026-07-25-app-desktop-design.md`](docs/superpowers/specs/2026-07-25-app-desktop-design.md).
 
 > **Status:** v0.3 — funcional ponta a ponta em desenvolvimento local (servidor Python
@@ -129,45 +130,77 @@ injeta *cache-busting*, então um F5 normal já pega a versão nova.
    nunca viu) e um portão que descarta qualquer regra cujo valor divirja do perfil
    dedicado. Campos que erram em layout novo **ficam de fora** e vão para a IA — é
    preferível um campo âmbar revisado a um campo verde errado.
-4. **Camada 2 — validação/drift:** campo sem âncora/regex cai para a IA; muitos campos
-   falhando sinalizam "layout pode ter mudado".
-5. **Camada 3 — IA (fallback):** só para os campos restantes (schema reduzido → rápido);
-   o valor é localizado no texto do PDF (string-match). Sem match → confiança baixa e o
-   campo é destacado para conferência. Coberturas que o documento simplesmente **não
-   menciona** viram "Não consta no PDF" (cinza) em vez de alerta vermelho.
+4. **Camada 2 — validação:** documento é conferido **página a página** (página sem texto
+   é sinalizada, não ignorada), cotações **multi-oferta** são detectadas, e falha da IA
+   vira aviso explícito — nunca campo vazio silencioso.
+5. **Camada 3 — IA (fallback):** só para os campos restantes (schema reduzido → rápido).
+   O valor devolvido só é aceito como **verificado** quando é encontrado no PDF **junto
+   a um rótulo daquele campo** — encontrar a string em qualquer lugar do documento não
+   é verificação. Sem isso, o campo vai para conferência. Coberturas que o documento não
+   menciona viram "Não consta no PDF" (cinza) — e só depois de conferir que nenhum
+   rótulo do campo aparece no documento.
    Modelo padrão: **`gpt-5-nano`**, com esforço de raciocínio ajustável em *Configurações*.
 
 ### Cobertura medida (15 PDFs de amostra, 31 campos)
 
-| | determinístico (verde) | IA verificada / não consta | a confirmar (vermelho) | vazio |
+| | determinístico | IA verificada / não consta | a confirmar | vazio |
 |---|---|---|---|---|
 | antes (v0.2) | 33% | 65% | | |
-| **agora (v0.3)** | **81%** | 11% | **0%** | 8% |
+| **agora** | **81%** | 6% | 4% | 9% |
 
-Concordância dos valores determinísticos com o consenso de 18 configurações de modelo:
-**97%** (era 82%) — e as divergências restantes são o perfil estando *mais* certo que os
-modelos (ex.: a seguradora de uma cotação Azul é "Azul Seguros", não a congênere
-"Allianz Seguros" que aparece no cabeçalho).
+Sob critério de plausibilidade por tipo de campo (moeda tem que parecer moeda, data tem
+que parecer data), o determinístico fica em **24,9/31 = 80%**. É o número que o
+[`tests/test_cobertura.py`](tests/) protege contra regressão.
+
+> A faixa "a confirmar" era 0% e passou a 4% porque a verificação da IA deixou de ser
+> um `contém` no documento inteiro. Os 11% de "IA verificada" da medição anterior
+> incluíam valores que o sistema não tinha como confirmar — hoje eles aparecem como o
+> que são.
 
 **Seguradora ainda sem perfil próprio:** medido em *leave-one-out* (cada layout avaliado
-por um dicionário genérico construído sem ele), a camada genérica sozinha entrega ~7 de 31
-campos. É pouco de propósito: as regras que erravam em layout novo foram removidas. Para
-uma seguradora nova, o caminho de subir a cobertura é **autorar o perfil dela** — está
-descrito em [`docs/perfis.md`](docs/perfis.md).
+por um dicionário genérico construído sem ele), a camada genérica sozinha entrega ~6,7 de
+31 campos, com **86% de precisão** — ou seja, ela erra. Para uma seguradora nova, o
+caminho é **autorar o perfil dela**, descrito em [`docs/perfis.md`](docs/perfis.md).
+
+> Ressalva de método, para não repetir a afirmação errada anterior: os campos
+> considerados "seguros" para a camada genérica foram escolhidos olhando o resultado de
+> todas as dobras do leave-one-out, o que torna o "zero erro" circular. Refeita a
+> seleção de forma aninhada, aparecem 3 erros. Além disso, 41% das regras embarcadas
+> vieram de uma fonte autorada com acesso aos 15 layouts e **nunca** passaram pelo
+> leave-one-out. Trate ~6,7/31 como um teto otimista.
+
+### Testes
+
+```
+python tests/run_all.py
+```
+
+Cinco testes, nenhum deles chama a OpenAI: contenção de caminho nas rotas públicas,
+não-regressão da cobertura determinística, detecção de multi-oferta, rejeição de valor
+inventado pela IA e os avisos da pipeline de validação.
 
 PDFs escaneados (sem camada de texto) ainda não são suportados — o MinerU foi avaliado e
 é a recomendação para esse caso: ver [`docs/avaliacao-mineru.md`](docs/avaliacao-mineru.md).
 
 ---
 
-## Distribuição (em desenvolvimento)
+## Distribuição — decisão em aberto
 
-Aplicativo instalável para Windows e macOS: janela nativa, ícone próprio, sem
-navegador à vista. A extração continua **inteira na máquina** — nenhum PDF sai dela.
-Um backend mínimo em n8n cuida de três coisas: quem pode entrar (whitelist revogável),
-a ponte para a OpenAI (a chave nunca vai no executável) e qual é a versão vigente.
+Duas vias, ambas medidas e viáveis:
 
-Perfis novos de seguradora chegam **sem reinstalar**: o app os baixa na abertura.
+**Plugin WordPress.** O motor porta para PHP (`smalot/pdfparser`, sem binário externo,
+roda em hospedagem compartilhada) entregando **23,3 de 31 campos** contra 25,1 do
+PyMuPDF — 93%. Custo: 3 valores divergentes em 350 que precisam de correção nos perfis
+antes de produção, e duas implementações do mesmo motor para manter. Medição em
+[`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md).
 
-Desenho completo em
+**App desktop (Windows/macOS).** Mantém o motor em Python sem reescrita nenhuma; janela
+nativa, extração inteira na máquina. Exige um backend mínimo (whitelist, ponte para a
+OpenAI, versão vigente) e um instalador por sistema. Desenho em
 [`docs/superpowers/specs/2026-07-25-app-desktop-design.md`](docs/superpowers/specs/2026-07-25-app-desktop-design.md).
+
+Em ambas, perfis novos de seguradora chegam sem reinstalar.
+
+> **Atenção ao que trafega.** Hoje a camada de IA envia o **texto integral** do PDF à
+> OpenAI — inclusive nome, CPF e CEP do segurado. Qualquer das duas vias herda isso
+> enquanto não houver redação dos dados pessoais antes do envio (ver `TODO.md`).

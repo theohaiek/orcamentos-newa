@@ -1,98 +1,122 @@
-# smalot/pdfparser × PyMuPDF — medição e decisão
+# smalot/pdfparser × PyMuPDF — quanto pior fica rodando em PHP
 
-Data: 2026-07-25 · Conclusão: **o port do motor para PHP foi descartado.**
+Data: 2026-07-26 (revisão) · **Corrige a versão de 2026-07-25, que estava errada.**
 
-## O que estava em jogo
+> **Retratação.** A primeira medição concluiu que o port para PHP renderia ~50% de
+> cobertura e que o `smalot` era incapaz de fornecer a informação que o motor precisa.
+> **Isso estava errado, e o erro era do script de teste, não da biblioteca.** Este
+> documento traz a medição refeita. A conclusão se inverte: o motor roda em PHP com
+> **93% da cobertura** que tem em Python, sem alterar um único perfil.
 
-O produto seria um plugin WordPress, que roda PHP e não roda Python. O motor de
-extração usa **PyMuPDF**, uma extensão C de Python, sem equivalente em PHP. O
-candidato a substituto era `smalot/pdfparser`: PHP puro, sem binário externo, sem
-`exec` — o único perfil que funciona em hospedagem compartilhada.
+## O que estava errado na primeira medição
 
-A pergunta era se ele entrega a informação de que o motor depende.
+| Defeito no script | Consequência que virou "limitação da biblioteca" |
+|---|---|
+| `getDataCommands()` não trata o operador `Do`, então todo texto dentro de **Form XObject** ficava invisível | `aliro` e `yelum` apareceram com "zero posição". O stream de página deles tem **47 bytes** — 100% do texto está no Form |
+| `/Contents` como **array de streams** não era desembrulhado | `bradesco` aparecia perdendo 41% do texto |
+| Foi ligado `setHorizontalOffset('')`, que é **código morto** na 2.12.5, e nunca foi ligado `setDataTmFontInfoHasToBeIncluded(true)`, que é a opção que dá fonte e corpo por fragmento | reconstrução de palavras muito pior do que o possível |
 
-## Ambiente do teste
+Também foi afirmado que o `smalot` "não tem nível de bloco". **Falso**: `getDataCommands()`
+é público e emite `BT`/`ET` (início/fim de bloco de texto), que cobre 88,9% das âncoras.
+E o "bloco" do PyMuPDF também não vem do PDF — é sintetizado pelo MuPDF, portanto é
+reproduzível em PHP.
 
-PHP 8.2.32 (NTS) + Composer 2.10.2 + `smalot/pdfparser` v2.12.5, contra os 15 PDFs de
-amostra. Comparação com a saída do `extract_engine.tokenize()` atual.
+Corrigidos os três defeitos (≈30 linhas de PHP):
 
-**Compatibilidade com WordPress: aprovada.** Requer apenas `php >= 7.1`, `ext-zlib` e
-`ext-iconv`, presentes em qualquer hospedagem. Instala por Composer e é vendorizável
-no `.zip` do plugin.
+| | script errado | corrigido |
+|---|---:|---:|
+| perda de tokens vs PyMuPDF | 16,4% | **0,1%** (11 de 18.381) |
+| âncoras dos perfis localizadas (fragmento cru) | 70% | **86,2%** |
+| âncoras dos perfis localizadas (reconstruído) | 75% | **96,4%** |
 
-**Ressalva de licença:** LGPL-3.0. Compatível com um plugin GPLv3+, incompatível com
+## Compatibilidade com WordPress: aprovada
+
+`smalot/pdfparser` v2.12.5 exige apenas `php >= 7.1`, `ext-zlib` e `ext-iconv` —
+presentes em qualquer hospedagem. PHP puro, sem binário externo, sem `exec`, instalável
+por Composer e vendorizável no `.zip` do plugin. Testado em PHP 8.2.32.
+
+**Ressalva de licença:** LGPL-3.0 — compatível com um plugin GPLv3+, incompatível com
 GPLv2-only.
 
-## Resultado
+## O teste que vale: o motor real, sem adaptação
 
-| arquivo | chars PyMuPDF | chars smalot | perda | frag. médio | âncoras | localizadas |
-|---|---:|---:|---:|---:|---:|---:|
-| aliro | 5.643 | **0** | **100%** | — | 23 | **0** |
-| allianz | 11.125 | 11.862 | — | 9,3 | 12 | 12 |
-| azul | 6.380 | 6.962 | — | 11,1 | 18 | 18 |
-| bradesco | 8.267 | 4.839 | **41%** | 18,7 | 27 | 16 |
-| darwin | 9.059 | 8.083 | 11% | 40,2 | 26 | 20 |
-| hdi | 5.935 | 5.935 | 0% | **1,0** | 15 | **0** |
-| itau | 6.832 | 7.473 | — | 11,2 | 23 | 22 |
-| justos | 4.321 | 4.367 | — | **1,1** | 24 | **0** |
-| mapfre | 6.562 | 7.446 | — | 20,2 | 30 | 30 |
-| mitsui | 6.773 | 7.412 | — | 11,3 | 28 | 25 |
-| porto | 7.240 | 7.947 | — | 11,7 | 26 | 23 |
-| suhai | 4.035 | 4.516 | — | 16,3 | 16 | 16 |
-| tokio | 8.684 | 9.761 | — | 20,9 | 29 | 29 |
-| yelum | 5.366 | **0** | **100%** | — | 14 | **0** |
-| zurich | 4.767 | 5.469 | — | 32,7 | 23 | 23 |
-| **total** | **100.989** | **92.072** | **9%** | | **334** | **234 (70%)** |
+Os fragmentos do `smalot` são convertidos em palavras/segmentos e entregues ao **motor
+de extração real** (`run_profile` + `run_generic`), com **os 18 perfis intocados**.
 
-"Âncoras" são os rótulos que os 15 perfis dedicados realmente usam para localizar cada
-campo. Se o rótulo não existe como texto contíguo, não há o que ancorar.
+| | PyMuPDF (hoje) | smalot (PHP) | |
+|---|---:|---:|---|
+| campos por PDF | 25,1/31 | **23,3/31** | **93,1%** |
+| valores idênticos | — | 342 de 376 | 91,0% |
+| campos que só o PyMuPDF pega | — | 26 | caem para a IA |
+| valores divergentes | — | 8 | ver abaixo |
+| tempo por PDF | 16 ms | 283 ms | 18× mais lento |
 
-## As quatro falhas
+283 ms por PDF é irrelevante para o caso de uso (o usuário envia 2 a 5 cotações e a
+chamada de IA sozinha leva segundos).
 
-**1. Dois PDFs sem posição alguma.** Em `aliro` e `yelum`, `getText()` devolve o texto
-(6.661 e 6.326 caracteres), mas `getDataTM()` devolve **zero** fragmentos. Um motor
-posicional não tem o que fazer com isso.
+### As 8 divergências, separadas por gravidade
 
-**2. Dois PDFs fragmentados por caractere.** Em `hdi`, 6.839 fragmentos para 7.070
-caracteres — cada letra é um fragmento, com a escala da fonte no lugar da largura.
-`justos` idem. Nenhum rótulo existe como unidade.
+**Três são valor realmente errado** — este é o custo real do port:
 
-**3. `bradesco` perde 41% do texto.** 8.267 → 4.839 caracteres.
+| arquivo | campo | PyMuPDF | PHP |
+|---|---|---|---|
+| `yelum` | `a_vista` | R$ 4.767,91 | **R$ 4.440,22** |
+| `aliro` | `parc_10x` | R$ 346,05 | **R$ 314,60** |
+| `yelum` | `veiculo` | TIGGO 7 SPORT 1.5 TURBO 16V AUT. (Flex) | **"Capacidade Categoria Reg. de Tarif..."** |
 
-**4. `darwin` corrompe bytes.** Um fragmento sai com UTF-8 inválido; sem
-`JSON_INVALID_UTF8_SUBSTITUTE`, `json_encode` devolve `false` silenciosamente.
+Os dois primeiros são do mesmo emissor (Autoperfil), cuja linha de total traz o mesmo
+valor repetido em 4 colunas de forma de pagamento — a reconstrução PHP pega a coluna
+errada. É corrigível no perfil, mas **tem que ser corrigido antes de qualquer uso real**:
+um preço errado vai direto para a proposta do cliente.
 
-## A tentativa de recuperação
+**Cinco são cosméticas** (mesmo conteúdo, espaço ou emenda):
 
-Um motor PHP real não usaria os fragmentos crus — reconstruiria linhas agrupando por
-`y` e concatenando por `x`, inferindo espaços. Implementado com heurística de limiar
-pela mediana dos avanços de cada linha (o melhor caso possível, já que o `smalot` não
-expõe largura de glifo):
+| arquivo | campo | diferença |
+|---|---|---|
+| `allianz` | `veiculo` | emendou `4PVersão: 000158/158.` no fim |
+| `bradesco` | `colisao_incendio_roubo` | emendou `Dias Paralisação` |
+| `hdi` | `veiculo` | `CAOA CHERY- TIGGO` (falta um espaço) |
+| `suhai` | `veiculo` | `16 V` em vez de `16V` |
+| `suhai` | `ano_modelo` | `2025` em vez de `2025/2025` |
 
-| | âncoras localizadas |
-|---|---:|
-| fragmentos crus | 70% |
-| linhas reconstruídas | **75%** |
+### Sobre `hdi` e `justos`
 
-`hdi` sobe de 0 para 4 de 15; `justos`, de 0 para 10 de 24. `aliro` e `yelum` seguem em
-zero — não há coordenada para reconstruir.
+Estes dois PDFs **realmente** posicionam caractere a caractere: 0,87 e 0,92 caracteres
+por operador `Tj`, contra 8,6 a 43,1 nos outros treze. Isso é do arquivo, não da
+biblioteca — nenhum parser faz melhor. Com a reconstrução de palavras corrigida, eles
+saem de 0 para 24/27 e 21/23 campos.
 
-## O problema que decide
+## Uma correção que veio deste estudo
 
-Mesmo os 75% recuperados são **linha visual**. A API do `smalot` (`getText`,
-`getTextArray`, `getDataTm`, `getTextXY`) expõe posição por operador `Tm` e nada mais:
-**não há o nível de bloco**.
+O casamento de perfil comparava os marcadores **com** espaços. Onde a reconstrução de
+palavras insere ou perde um espaço no meio do marcador, o perfil deixava de casar e o
+documento inteiro caía na IA. `match_profile` passou a comparar **sem espaços**
+(`extract_engine._nospace`). Isso não muda nada no caminho PyMuPDF — os 15 PDFs casam
+com os mesmos 15 perfis e a cobertura continua 25,1/31 — e é o que leva a via PHP de
+20,3 para 23,3 campos.
 
-E o bloco é exatamente o que produziu o salto de 33% para 81%. Ler "o valor à direita
-do rótulo" pela linha visual invade a coluna vizinha num formulário multi-coluna —
-`Veículo: Valor de Mercado Referenciado  Dias Paralisação: 0,00  D.M.: 100.000,00`.
-Foi a causa raiz corrigida na v0.3, e é o que o `smalot` não permite corrigir.
+## Conclusão
 
-## Decisão
+O port para PHP é **viável**, e o WordPress volta a ser uma opção legítima de
+distribuição. O custo honesto:
 
-Port descartado. A estimativa realista era **~50% de cobertura determinística** contra
-81%, com 4 dos 15 layouts quebrados — e sem caminho de melhoria, porque a limitação
-está na informação que a biblioteca expõe, não no esforço de implementação.
+- **–7% de cobertura determinística** (23,3 contra 25,1 campos por PDF); a diferença
+  cai para a camada de IA, que já existe.
+- **3 valores errados em 350** que precisam ser corrigidos no perfil antes de produção.
+- **18× mais lento**, sem impacto prático.
+- Duas implementações do mesmo motor para manter em paralelo — este é o custo
+  recorrente, e é o argumento mais forte contra.
 
-O motor fica em Python. O invólucro deixa de ser um plugin WordPress e passa a ser um
-aplicativo desktop: ver [`superpowers/specs/2026-07-25-app-desktop-design.md`](superpowers/specs/2026-07-25-app-desktop-design.md).
+A escolha entre plugin WordPress e app desktop volta a ser uma decisão de **produto**
+(onde o usuário quer usar, que controle de acesso se quer ter), não de capacidade
+técnica. O desenho do app desktop está em
+[`superpowers/specs/2026-07-25-app-desktop-design.md`](superpowers/specs/2026-07-25-app-desktop-design.md)
+e a sua justificativa técnica precisa ser relida à luz destes números.
+
+## Como reproduzir
+
+O ambiente PHP e os scripts de medição ficam fora do repositório (são ferramentas de
+avaliação, não do produto). Passos: instalar `smalot/pdfparser` por Composer, extrair
+os 15 PDFs com um dumper que trate `Do`, `/Contents` em array e ligue
+`setDataTmFontInfoHasToBeIncluded(true)`, converter fragmentos em palavras por métrica
+de glifo e alimentar `EE.run_profile`/`EE.run_generic` com o resultado.

@@ -29,3 +29,7 @@ orcamentos-newa/assets/logos/_map.json
 dist/
 build/
 *.zip
+
+# Amostras com dados reais de cliente — nunca versionar
+Modelo-Inputs/
+*.pdf

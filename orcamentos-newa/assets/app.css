@@ -260,6 +260,15 @@ textarea.input { padding: 12px 14px; min-height: 84px; line-height: 1.5; resize:
 .filerow .st.done { color: var(--ok); }
 .filerow .st.err { color: var(--err); }
 .filerow .st.work { color: var(--info); }
+.filerow .st.warn { color: var(--warn); }
+
+/* avisos de leitura do PDF — página ilegível, multi-oferta, falha da IA.
+   Ficam no próprio card do arquivo: o usuário precisa ver antes de seguir. */
+.up-avisos { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 2px; }
+.up-aviso { display: flex; gap: 9px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+.up-aviso svg { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+.up-aviso.erro { background: var(--err-bg); color: #8E2020; box-shadow: inset 0 0 0 1px #F3C9C9; }
+.up-aviso.atencao { background: #FFF6E0; color: #7A5800; box-shadow: inset 0 0 0 1px #F2E0B0; }
 
 /* spinner */
 .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; display: inline-block; }

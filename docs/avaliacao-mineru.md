@@ -55,10 +55,11 @@ Por que o MinerU perde aqui:
 
 - **Reordena o conteúdo.** A detecção de ordem de leitura embaralha formulários: no
   Bradesco, o bloco "DADOS DO CORRETOR" aparece antes do cabeçalho do documento.
-- **Perde valores.** `CPF/CNPJ: XXX.XXX.XXX-XX` virou `CPF/CNPJ:` sem valor; `Sexo:
-  Feminino` virou `Sexo:`. Célula fundida na reconstrução da tabela = dado que some.
+- **Perde valores.** O CPF do segurado virou `CPF/CNPJ:` sem valor; `Sexo: Feminino`
+  virou `Sexo:`. Célula fundida na reconstrução da tabela = dado que some.
 - **Faz OCR mesmo quando há texto nativo** (backend `pipeline` rasteriza a página), o que
-  introduz erros de reconhecimento: `320 Ia 2.0 Turbo` virou `320 la 2.0 Turbo`.
+  introduz erros de reconhecimento: no modelo do veículo, um `I` maiúsculo virou `l`
+  minúsculo.
 - **Coordenadas só por bloco.** O `content_list` traz bbox da *tabela inteira*, não da
   célula. O app precisa de bbox **por valor** para destacar a origem de cada campo no
   assistente de conferência — isso o `get_text("words")` do PyMuPDF dá de graça.
