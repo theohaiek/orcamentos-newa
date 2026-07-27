@@ -845,24 +845,46 @@
       src.querySelectorAll("[contenteditable]").forEach((e) => e.setAttribute("contenteditable", "false"));
       const pages = src.querySelectorAll(".doc-page");
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
-      const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
-      for (let i = 0; i < pages.length; i++) {
-        const canvas = await window.html2canvas(pages[i], { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
-        const img = canvas.toDataURL("image/jpeg", 0.94);
-        const ratio = canvas.width / canvas.height;
-        let w = pw, h = w / ratio;
-        if (h > ph) { h = ph; w = h * ratio; }
-        const x = (pw - w) / 2, y = 0;
-        if (i > 0) pdf.addPage();
-        pdf.addImage(img, "JPEG", x, y, w, h);
+      const PW = 595;                       // largura de um A4 em pontos
+
+      // Fotografa tudo primeiro: o PDF precisa nascer já com o tamanho da primeira
+      // folha, e cada folha tem o seu.
+      const fotos = [];
+      for (const pag of pages) {
+        const canvas = await window.html2canvas(pag, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+        fotos.push({ img: canvas.toDataURL("image/jpeg", 0.94), h: PW * (canvas.height / canvas.width) });
       }
+      if (!fotos.length) throw new Error("nada para exportar");
+
+      // A FOLHA se adapta ao conteúdo, e não o contrário. Antes, quando a imagem
+      // era mais alta que um A4, ela era encolhida INTEIRA até caber — o comparativo
+      // saía com 58% da largura, 4,4 cm de branco de cada lado e texto a 5,9pt, e
+      // piorava a cada cobertura a mais. Agora a largura é sempre a de um A4 e a
+      // altura acompanha a proporção, então o PDF fica idêntico ao que está na tela.
+      const fmt = (f) => [PW, f.h];
+      const pdf = new jsPDF({ unit: "pt", format: fmt(fotos[0]),
+                              orientation: fotos[0].h >= PW ? "portrait" : "landscape" });
+      fotos.forEach((f, i) => {
+        if (i > 0) pdf.addPage(fmt(f), f.h >= PW ? "portrait" : "landscape");
+        pdf.addImage(f.img, "JPEG", 0, 0, PW, f.h);
+      });
       const nome = (S.proposal.info.segurado || "cliente").split(" ")[0].toLowerCase();
-      pdf.save("proposta-newa-" + nome + ".pdf");
+      // Gravar pelo servidor local em vez do download do navegador: numa janela de
+      // aplicativo o download depende do delegate da casca (o pywebview vem com ele
+      // desligado) e falhava em silêncio — o arquivo não nascia e a tela dizia
+      // "gerado com sucesso". Aqui o sucesso só é anunciado com o caminho em mãos.
+      const r = await fetch("/api/save-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/pdf",
+                   "X-Nome-Arquivo": encodeURIComponent("proposta-newa-" + nome + ".pdf") },
+        body: pdf.output("blob"),
+      });
+      const res = await r.json().catch(() => ({}));
+      if (!r.ok || !res.ok) throw new Error(res.error || "o arquivo não pôde ser gravado");
       src.querySelectorAll("[contenteditable]").forEach((e) => e.setAttribute("contenteditable", "true"));
       src.classList.remove("exporting");
       const w = document.querySelector(".wiz-overlay"); if (w) w.remove();
-      toast("PDF gerado com sucesso.", "ok");
+      toast("Proposta salva em " + res.pasta, "ok");
     } catch (e) {
       const w = document.querySelector(".wiz-overlay"); if (w) w.style.visibility = "visible";
       toast("Falha ao gerar PDF: " + (e.message || e), "err");

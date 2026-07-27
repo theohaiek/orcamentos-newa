@@ -773,6 +773,52 @@ class H(BaseHTTPRequestHandler):
         if cookie: self.send_header("Set-Cookie", cookie)
         self.end_headers(); self.wfile.write(b)
 
+    def salvar_pdf(self):
+        """Grava o PDF montado no navegador e devolve o caminho real em disco.
+
+        O caminho óbvio seria o download do próprio navegador (`pdf.save()`), e era
+        o que existia. Só que numa janela de aplicativo o download depende de a
+        casca implementar o delegate — o pywebview vem com `ALLOW_DOWNLOADS: False`
+        — e o resultado era o pior possível: o arquivo não era criado e a interface
+        anunciava sucesso assim mesmo. Numa corretora, isso é a pessoa achar que
+        mandou a proposta e não ter mandado.
+
+        Gravando aqui, o sucesso deixa de ser suposição: ou o arquivo existe e o
+        caminho volta para a tela, ou volta erro. Também torna o comportamento igual
+        em Windows e macOS, onde as regras de download são diferentes.
+        """
+        dados = self.read_body()
+        if not dados or not dados.startswith(b"%PDF"):
+            return self.send_json({"error": "conteúdo não é um PDF"}, 400)
+        if len(dados) > 60 * 1024 * 1024:
+            return self.send_json({"error": "arquivo grande demais"}, 413)
+
+        bruto = unquote(self.headers.get("X-Nome-Arquivo", "") or "proposta")
+        # só o que é seguro num nome de arquivo: nada de caminho, nada de reservado
+        nome = re.sub(r"[^\w .\-()]+", "-", bruto, flags=re.UNICODE).strip(" .-")[:80] or "proposta"
+        if not nome.lower().endswith(".pdf"):
+            nome += ".pdf"
+
+        pasta = os.path.join(os.path.expanduser("~"), "Documents", "Propostas NEWA")
+        try:
+            os.makedirs(pasta, exist_ok=True)
+        except OSError:
+            pasta = DEV
+        destino = os.path.join(pasta, nome)
+        base, ext = os.path.splitext(destino)
+        n = 2
+        while os.path.exists(destino):        # nunca sobrescrever proposta anterior
+            destino = f"{base} ({n}){ext}"; n += 1
+        try:
+            with open(destino, "wb") as f:
+                f.write(dados)
+        except OSError as e:
+            return self.send_json({"error": f"não foi possível gravar: {e}"}, 500)
+        if not os.path.exists(destino) or os.path.getsize(destino) != len(dados):
+            return self.send_json({"error": "o arquivo não foi gravado por inteiro"}, 500)
+        return self.send_json({"ok": True, "path": destino, "pasta": pasta,
+                               "nome": os.path.basename(destino), "bytes": len(dados)})
+
     def read_body(self):
         n = int(self.headers.get("Content-Length", 0) or 0)
         return self.rfile.read(n) if n else b""
@@ -901,6 +947,9 @@ class H(BaseHTTPRequestHandler):
             return self.send_json({"user": pub(u)}, cookie=f"orca_sess={tok}; Path=/; HttpOnly; SameSite=Lax")
         if p == "/api/logout":
             return self.send_json({"ok": True}, cookie="orca_sess=; Path=/; Max-Age=0")
+        if p == "/api/save-pdf":
+            if not self.user(): return self.send_json({"error": "unauth"}, 401)
+            return self.salvar_pdf()
         me = self.user()
         if not me: return self.send_json({"error": "unauth"}, 401)
         if p == "/api/extract":
