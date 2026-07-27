@@ -849,10 +849,25 @@
 
       // Fotografa tudo primeiro: o PDF precisa nascer já com o tamanho da primeira
       // folha, e cada folha tem o seu.
+      //
+      // Qualidade: PNG, não JPEG. O documento é texto e cor chapada — exatamente o
+      // conteúdo em que o JPEG erra, deixando um chiado em volta de cada letra. E a
+      // captura sai a 3x, o que dá ~300 DPI na largura de um A4 (com 2x saía a 198,
+      // abaixo do padrão de impressão e visivelmente mole na tela).
+      //
+      // O 3x é um teto, não uma promessa: todo navegador limita o tamanho de um
+      // canvas, e ao estourar o limite o html2canvas devolve uma imagem VAZIA, sem
+      // erro. Com muitas coberturas ou muitas seguradoras o comparativo cresce e
+      // chegaria lá — e o PDF sairia em branco anunciando sucesso. Por isso a escala
+      // cai sozinha até caber.
+      const LIM = 12000;                    // margem folgada sob o limite dos navegadores
       const fotos = [];
       for (const pag of pages) {
-        const canvas = await window.html2canvas(pag, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
-        fotos.push({ img: canvas.toDataURL("image/jpeg", 0.94), h: PW * (canvas.height / canvas.width) });
+        const alvo = Math.max(1, Math.min(3, LIM / Math.max(pag.scrollWidth, pag.scrollHeight)));
+        const escala = Math.round(alvo * 10) / 10;
+        const canvas = await window.html2canvas(pag, { scale: escala, useCORS: true, backgroundColor: "#ffffff" });
+        if (!canvas.width || !canvas.height) throw new Error("a captura da página saiu vazia");
+        fotos.push({ img: canvas.toDataURL("image/png"), h: PW * (canvas.height / canvas.width) });
       }
       if (!fotos.length) throw new Error("nada para exportar");
 

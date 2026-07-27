@@ -135,5 +135,17 @@ console.log(">> guarda: as funções ainda existem no app.js");
  ["botão usa só os vazios", /pendingBreakdown\(\)\.vazios/],
 ].forEach(([nome, re]) => ok(re.test(src), nome));
 
+/* Exportação: guardas do que já custou caro descobrir. Não dá para medir a
+ * qualidade do PDF sem gerar um, mas dá para impedir a volta das três escolhas
+ * que produziram um PDF ruim ou inexistente. */
+console.log(">> guarda: exportação do PDF");
+ok(/toDataURL\("image\/png"\)/.test(src), "captura em PNG — JPEG deixa chiado em volta das letras");
+ok(!/toDataURL\("image\/jpeg"/.test(src), "nenhum resquício de JPEG na exportação");
+ok(/Math\.min\(3,\s*LIM \/ Math\.max/.test(src), "escala adaptativa: 3x de teto, caindo para caber no canvas");
+ok(/if \(!canvas\.width \|\| !canvas\.height\) throw/.test(src), "captura vazia vira erro, não PDF em branco");
+ok(/fetch\("\/api\/save-pdf"/.test(src), "grava pelo servidor, não pelo download do navegador");
+ok(!/pdf\.save\(/.test(src), "nenhuma chamada a pdf.save() — era ela que falhava calada");
+ok(/if \(!r\.ok \|\| !res\.ok\) throw/.test(src), "só anuncia sucesso com confirmação do servidor");
+
 console.log(`\n  RESULTADO: ${falhas.length ? "FALHOU -> " + falhas.join("; ") : "OK"}`);
 process.exit(falhas.length ? 1 : 0);
