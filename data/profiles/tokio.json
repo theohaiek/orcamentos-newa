@@ -2,20 +2,20 @@
   "id": "tokio",
   "label": "Tokio Marine — Cotação Auto (4 páginas, tabelas Débito/Ficha/Cartão)",
   "priority": 10,
-  "match": ["cotação tokio marine", "tokiomarine.com.br"],
+  "match": [
+    "cotação tokio marine",
+    "tokiomarine.com.br"
+  ],
   "fields": {
     "seguradora": {
       "pick": "text_regex",
       "anchor": "Cotação Tokio Marine",
-      "page": 1,
       "regex": "Cota[çc][ãa]o (Tokio Marine)"
     },
-
     "segurado": {
       "pick": "under",
       "anchor": "Proponente",
       "exact": true,
-      "page": 1,
       "xlo": 10,
       "xhi": 60,
       "dy": 25,
@@ -23,11 +23,9 @@
       "min_len": 8,
       "not_regex": ":"
     },
-
     "veiculo": {
       "pick": "below",
       "anchor": "Fabricante",
-      "page": 2,
       "at_x": 34.1,
       "xlo": 18,
       "xhi": 400,
@@ -36,143 +34,114 @@
       "max_words": 14,
       "not_regex": "\\d{6}-\\d|[A-Z0-9]{14,}|fabricante"
     },
-
     "ano_modelo": {
       "pick": "under",
       "anchor": "Ano modelo",
       "exact": true,
-      "page": 2,
       "dy": 20,
       "xlo": 12,
       "xhi": 60,
       "regex": "(?:19|20)\\d{2}"
     },
-
     "data_proposta": {
       "pick": "kv",
       "anchor": "Data impressão",
-      "page": 1,
       "regex": "\\d{2}/\\d{2}/\\d{4}",
       "format": "date_iso"
     },
-
     "validade": {
       "pick": "kv",
       "anchor": "Validade cotação",
-      "page": 1,
       "regex": "\\d{2}/\\d{2}/\\d{4}"
     },
-
     "uso_veiculo": {
       "pick": "under",
       "anchor": "Tipo de utilização",
       "exact": true,
-      "page": 2,
       "dy": 20,
       "xlo": 12,
       "xhi": 60,
       "regex": "particular|comercial",
       "format": "upper"
     },
-
     "condutores_18_26": {
       "pick": "under",
       "anchor": "faixa etária de 18 a 25 anos",
-      "page": 1,
       "dy": 20,
       "xlo": 12,
       "xhi": 60,
       "regex": "^\\s*(Sim|N[ãa]o)\\b",
       "format": "simnao"
     },
-
     "cep_circulacao": {
       "pick": "under",
       "anchor": "CEP de pernoite",
       "exact": true,
-      "page": 2,
       "dy": 25,
       "xlo": 12,
       "xhi": 60,
       "regex": "\\d{5}-?\\d{3}",
       "format": "cep"
     },
-
     "colisao_incendio_roubo": {
       "pick": "text_regex",
       "anchor": "Valor Referenciado (VMR)",
-      "page": 2,
       "regex": "(Valor Referenciado \\(VMR\\))"
     },
-
     "rcf_danos_materiais": {
       "pick": "row",
       "anchor": "RCF-V - Danos Materiais",
       "exact": true,
-      "page": 2,
       "xmax": 480,
       "regex": "[\\d.]+,\\d{2}",
       "min_value": 10000,
       "format": "currency"
     },
-
     "rcf_danos_pessoais": {
       "pick": "row",
       "anchor": "RCF-V - Danos Corporais",
       "exact": true,
-      "page": 2,
       "xmax": 480,
       "regex": "[\\d.]+,\\d{2}",
       "min_value": 10000,
       "format": "currency"
     },
-
     "acidente_pessoal_passageiro": {
       "pick": "row",
       "anchor": "APP - Invalidez permanente",
-      "page": 2,
       "xmax": 480,
       "max_words": 3
     },
-
     "morte_pessoal_passageiro": {
       "pick": "row",
       "anchor": "APP - Morte",
-      "page": 2,
       "xmax": 480,
       "max_words": 3
     },
-
     "km_reboque": {
       "pick": "row",
       "anchor": "Km adicional de reboque",
       "exact": true,
-      "page": 2,
       "xmax": 480,
       "max_words": 3
     },
-
     "diarias_carro_reserva": {
       "pick": "under",
       "anchor": "Carro reserva",
       "exact": true,
-      "page": 3,
       "dy": 20,
       "xlo": 12,
       "xhi": 60,
       "regex": "\\d+\\s*di[áa]ria?s?"
     },
-
     "franquia_veiculo": {
       "pick": "row",
       "anchor": "Indenização Parcial do Veículo",
       "exact": true,
-      "page": 3,
       "regex": "[\\d.]+,\\d{2}",
       "min_value": 100,
       "format": "currency"
     },
-
     "para_brisas": {
       "pick": "row",
       "anchor": "Parabrisa",
@@ -183,7 +152,6 @@
       "regex": "R\\$ ?[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "farois": {
       "pick": "row",
       "anchor": "Farol Halógeno",
@@ -194,7 +162,6 @@
       "regex": "R\\$ ?[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "lanternas": {
       "pick": "row",
       "anchor": "Lanterna Halógena",
@@ -206,7 +173,6 @@
       "regex": "R\\$ ?[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "retrovisores": {
       "pick": "row",
       "anchor": "Retrovisor externo",
@@ -218,7 +184,6 @@
       "regex": "R\\$ ?[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "reparo_para_choque": {
       "pick": "row",
       "anchor": "Para-choque (reparo)",
@@ -229,7 +194,6 @@
       "regex": "R\\$ ?[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "reparo_amassados": {
       "pick": "row",
       "anchor": "Martelinho (demais peças)",
@@ -240,7 +204,6 @@
       "regex": "R\\$ ?[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "protecao_pneu_roda_suspensao": {
       "pick": "row",
       "anchor": "Roda, Pneu e Suspensão",
@@ -251,12 +214,10 @@
       "regex": "R\\$ ?[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "a_vista": [
       {
         "pick": "under",
         "anchor": "Incêndio e Roubo/Furto",
-        "page": 1,
         "dy": 35,
         "xlo": 15,
         "xhi": 120,
@@ -268,7 +229,6 @@
         "pick": "row",
         "anchor": "1",
         "exact": true,
-        "page": 4,
         "section": "Cartão",
         "xmax": 150,
         "regex": "[\\d.]+,\\d{2}",
@@ -276,36 +236,30 @@
         "format": "currency"
       }
     ],
-
     "parc_4x": {
       "pick": "row",
       "anchor": "4",
       "exact": true,
-      "page": 4,
       "section": "Cartão",
       "xmax": 150,
       "regex": "[\\d.]+,\\d{2}",
       "min_value": 50,
       "format": "currency"
     },
-
     "parc_6x": {
       "pick": "row",
       "anchor": "6",
       "exact": true,
-      "page": 4,
       "section": "Cartão",
       "xmax": 150,
       "regex": "[\\d.]+,\\d{2}",
       "min_value": 50,
       "format": "currency"
     },
-
     "parc_10x": {
       "pick": "row",
       "anchor": "10",
       "exact": true,
-      "page": 4,
       "section": "Cartão",
       "xmin": 350,
       "xmax": 450,

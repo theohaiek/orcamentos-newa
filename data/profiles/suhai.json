@@ -9,13 +9,11 @@
   "fields": {
     "seguradora": {
       "pick": "text_regex",
-      "page": 1,
       "regex": "(SUHAI\\s+SEGURADORA\\s+S\\.?A\\.?)",
       "format": "upper"
     },
     "segurado": {
       "pick": "under",
-      "page": 1,
       "anchor": "Nome/Razão Social",
       "exact": true,
       "section": "DADOS DO PROPONENTE",
@@ -30,7 +28,6 @@
     "veiculo": [
       {
         "pick": "text_regex",
-        "page": 1,
         "anchor": "Código FIPE",
         "section": "DADOS DO VEICULO SEGURADO",
         "section_end": "OPÇÕES",
@@ -41,7 +38,6 @@
       },
       {
         "pick": "regex_near",
-        "page": 1,
         "anchor": "Código FIPE",
         "span": 1,
         "regex": "\\d{6}-\\d\\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9.,'/\\- ]{8,})$",
@@ -52,7 +48,6 @@
     ],
     "ano_modelo": {
       "pick": "under",
-      "page": 1,
       "anchor": "Ano Fabr./Modelo",
       "exact": true,
       "dy": 20,
@@ -62,7 +57,6 @@
     },
     "data_proposta": {
       "pick": "kv",
-      "page": 1,
       "anchor": "Data",
       "exact": true,
       "regex": "\\d{2}/\\d{2}/\\d{4}",
@@ -70,14 +64,12 @@
     },
     "validade": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Validade desta cotação",
       "regex": "\\d{1,3}\\s*dias?",
       "max_words": 3
     },
     "uso_veiculo": {
       "pick": "under",
-      "page": 1,
       "anchor": "Utilização",
       "exact": true,
       "dy": 20,
@@ -89,7 +81,6 @@
     },
     "cep_circulacao": {
       "pick": "under",
-      "page": 1,
       "anchor": "CEP Pernoite",
       "dy": 22,
       "xlo": 12,
@@ -99,7 +90,6 @@
     },
     "colisao_incendio_roubo": {
       "pick": "row",
-      "page": 1,
       "anchor": "Compreensiva",
       "exact": true,
       "section": "COBERTURAS",
@@ -110,7 +100,6 @@
     },
     "rcf_danos_materiais": {
       "pick": "row",
-      "page": 1,
       "anchor": "RCF - Danos Materiais",
       "exact": true,
       "section": "COBERTURAS",
@@ -123,7 +112,6 @@
     },
     "rcf_danos_pessoais": {
       "pick": "row",
-      "page": 1,
       "anchor": "RCF - Danos Corporais",
       "exact": true,
       "section": "COBERTURAS",
@@ -136,7 +124,6 @@
     },
     "km_reboque": {
       "pick": "under",
-      "page": 1,
       "anchor": "Assistência 24 horas",
       "exact": true,
       "section": "COBERTURAS",
@@ -155,7 +142,6 @@
     },
     "franquia_veiculo": {
       "pick": "row",
-      "page": 1,
       "anchor": "Franquia Perdas Parciais",
       "exact": true,
       "section": "COBERTURAS",
@@ -166,7 +152,6 @@
     },
     "a_vista": {
       "pick": "row",
-      "page": 1,
       "anchor": "Prêmio total, com IOF",
       "exact": true,
       "section": "COBERTURAS",
@@ -177,7 +162,6 @@
     },
     "parc_4x": {
       "pick": "row",
-      "page": 2,
       "anchor": "4",
       "exact": true,
       "section": "Parcelas",
@@ -189,7 +173,6 @@
     },
     "parc_6x": {
       "pick": "row",
-      "page": 2,
       "anchor": "6",
       "exact": true,
       "section": "Parcelas",
@@ -201,7 +184,6 @@
     },
     "parc_10x": {
       "pick": "row",
-      "page": 2,
       "anchor": "10",
       "exact": true,
       "section": "Parcelas",

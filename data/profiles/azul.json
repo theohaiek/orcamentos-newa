@@ -1,159 +1,267 @@
 {
   "id": "azul",
   "label": "Azul Seguros — Orçamento de Seguro (Azul Tradicional)",
-  "match": ["Azul Tradicional", "Orçamento de Seguro"],
+  "match": [
+    "Azul Tradicional",
+    "Orçamento de Seguro"
+  ],
   "priority": 10,
   "fields": {
     "seguradora": {
-      "pick": "text_regex", "page": 1,
+      "pick": "text_regex",
       "regex": "(Azul Tradicional)",
-      "replace": [["Azul Tradicional", "Azul Seguros"]]
+      "replace": [
+        [
+          "Azul Tradicional",
+          "Azul Seguros"
+        ]
+      ]
     },
-
     "segurado": {
-      "pick": "under", "page": 1, "anchor": "Segurado(a)", "exact": true,
-      "at_x": 30, "xlo": 8, "xhi": 40, "dy": 18,
-      "regex": "^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' ]{9,}$", "min_len": 10, "max_words": 7
+      "pick": "under",
+      "anchor": "Segurado(a)",
+      "exact": true,
+      "at_x": 30,
+      "xlo": 8,
+      "xhi": 40,
+      "dy": 18,
+      "regex": "^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' ]{9,}$",
+      "min_len": 10,
+      "max_words": 7
     },
-
     "principal_condutor": {
-      "pick": "under", "page": 1, "anchor": "Condutor", "exact": true,
-      "at_x": 29, "xlo": 8, "xhi": 40, "dy": 20,
-      "regex": "^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' ]{9,}$", "min_len": 10, "max_words": 7
+      "pick": "under",
+      "anchor": "Condutor",
+      "exact": true,
+      "at_x": 29,
+      "xlo": 8,
+      "xhi": 40,
+      "dy": 20,
+      "regex": "^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' ]{9,}$",
+      "min_len": 10,
+      "max_words": 7
     },
-
     "veiculo": {
-      "pick": "under", "page": 1, "anchor": "Veículo", "exact": true, "occurrence": 2,
-      "at_x": 206, "xlo": 8, "xhi": 45, "dy": 18,
-      "regex": "^[\\d\\s-]*([A-Za-zÀ-ÿ].+)$", "min_len": 6,
+      "pick": "under",
+      "anchor": "Veículo",
+      "exact": true,
+      "occurrence": 2,
+      "at_x": 206,
+      "xlo": 8,
+      "xhi": 45,
+      "dy": 18,
+      "regex": "^[\\d\\s-]*([A-Za-zÀ-ÿ].+)$",
+      "min_len": 6,
       "not_regex": "[A-Z0-9]{15,}"
     },
-
     "ano_modelo": {
-      "pick": "under", "page": 1, "anchor": "Ano Fabricação / Modelo", "exact": true,
-      "at_x": 455, "xlo": 8, "xhi": 40, "dy": 18,
+      "pick": "under",
+      "anchor": "Ano Fabricação / Modelo",
+      "exact": true,
+      "at_x": 455,
+      "xlo": 8,
+      "xhi": 40,
+      "dy": 18,
       "regex": "\\d{4}\\s*/\\s*\\d{4}",
-      "replace": [["\\s*/\\s*", "/"]]
+      "replace": [
+        [
+          "\\s*/\\s*",
+          "/"
+        ]
+      ]
     },
-
     "data_proposta": {
-      "pick": "under", "page": 1, "anchor": "Realizado", "exact": true,
-      "at_x": 197, "xlo": 8, "xhi": 30, "dy": 18,
-      "regex": "\\d{2}/\\d{2}/\\d{4}", "format": "date_iso"
+      "pick": "under",
+      "anchor": "Realizado",
+      "exact": true,
+      "at_x": 197,
+      "xlo": 8,
+      "xhi": 30,
+      "dy": 18,
+      "regex": "\\d{2}/\\d{2}/\\d{4}",
+      "format": "date_iso"
     },
-
     "validade": {
-      "pick": "under", "page": 1, "anchor": "Validade", "exact": true,
-      "at_x": 268, "xlo": 8, "xhi": 30, "dy": 18,
-      "regex": "\\d{2}/\\d{2}/\\d{4}", "format": "date_iso"
+      "pick": "under",
+      "anchor": "Validade",
+      "exact": true,
+      "at_x": 268,
+      "xlo": 8,
+      "xhi": 30,
+      "dy": 18,
+      "regex": "\\d{2}/\\d{2}/\\d{4}",
+      "format": "date_iso"
     },
-
     "uso_veiculo": {
-      "pick": "under", "page": 1, "anchor": "Tipo de uso", "exact": true,
-      "at_x": 29, "xlo": 8, "xhi": 40, "dy": 16,
-      "regex": "^(Particular|Comercial)$", "format": "upper"
+      "pick": "under",
+      "anchor": "Tipo de uso",
+      "exact": true,
+      "at_x": 29,
+      "xlo": 8,
+      "xhi": 40,
+      "dy": 16,
+      "regex": "^(Particular|Comercial)$",
+      "format": "upper"
     },
-
     "cep_circulacao": {
-      "pick": "under", "page": 1, "anchor": "CEP de pernoite", "exact": true,
-      "at_x": 203, "xlo": 8, "xhi": 40, "dy": 16,
-      "regex": "\\d{5}-?\\d{3}", "format": "cep"
+      "pick": "under",
+      "anchor": "CEP de pernoite",
+      "exact": true,
+      "at_x": 203,
+      "xlo": 8,
+      "xhi": 40,
+      "dy": 16,
+      "regex": "\\d{5}-?\\d{3}",
+      "format": "cep"
     },
-
     "colisao_incendio_roubo": {
-      "pick": "text_regex", "page": 1,
+      "pick": "text_regex",
       "regex": "-\\s*(Valor de mercado)\\b",
-      "replace": [["mercado", "Mercado"]]
+      "replace": [
+        [
+          "mercado",
+          "Mercado"
+        ]
+      ]
     },
-
     "rcf_danos_materiais": {
-      "pick": "row", "page": 1, "anchor": "RCF-V Danos Materiais", "starts_with": true,
-      "xmin": 230, "xmax": 340,
-      "regex": "R\\$ ?[\\d.]+,\\d{2}", "min_value": 10000, "format": "currency"
+      "pick": "row",
+      "anchor": "RCF-V Danos Materiais",
+      "starts_with": true,
+      "xmin": 230,
+      "xmax": 340,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "min_value": 10000,
+      "format": "currency"
     },
-
     "rcf_danos_pessoais": {
-      "pick": "row", "page": 1, "anchor": "RCF-V Danos Corporais", "starts_with": true,
-      "xmin": 230, "xmax": 340,
-      "regex": "R\\$ ?[\\d.]+,\\d{2}", "min_value": 10000, "format": "currency"
+      "pick": "row",
+      "anchor": "RCF-V Danos Corporais",
+      "starts_with": true,
+      "xmin": 230,
+      "xmax": 340,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "min_value": 10000,
+      "format": "currency"
     },
-
     "franquia_veiculo": {
-      "pick": "row", "page": 1, "anchor": "Compreensiva", "starts_with": true,
-      "xmin": 340, "xmax": 420,
-      "regex": "R\\$ ?[\\d.]+,\\d{2}", "min_value": 100, "format": "currency"
+      "pick": "row",
+      "anchor": "Compreensiva",
+      "starts_with": true,
+      "xmin": 340,
+      "xmax": 420,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "min_value": 100,
+      "format": "currency"
     },
-
     "protecao_pneu_roda_suspensao": {
-      "pick": "under", "page": 1, "anchor": "Roda, Pneu e Suspensão", "exact": true,
-      "at_x": 362, "xlo": 8, "xhi": 60, "dy": 16,
-      "regex": "R\\$ ?[\\d.]+,\\d{2}", "min_value": 1, "format": "currency"
+      "pick": "under",
+      "anchor": "Roda, Pneu e Suspensão",
+      "exact": true,
+      "at_x": 362,
+      "xlo": 8,
+      "xhi": 60,
+      "dy": 16,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "min_value": 1,
+      "format": "currency"
     },
-
     "reparo_amassados": {
-      "pick": "row", "page": 1, "anchor": "Pequenos Reparos", "starts_with": true,
-      "xmin": 340, "xmax": 420,
-      "regex": "R\\$ ?[\\d.]+,\\d{2}", "min_value": 1, "format": "currency"
+      "pick": "row",
+      "anchor": "Pequenos Reparos",
+      "starts_with": true,
+      "xmin": 340,
+      "xmax": 420,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "min_value": 1,
+      "format": "currency"
     },
-
     "reparo_para_choque": {
-      "pick": "row", "page": 1, "anchor": "Troca de Para-choque", "starts_with": true,
-      "xmin": 340, "xmax": 420,
-      "regex": "R\\$ ?[\\d.]+,\\d{2}", "min_value": 1, "format": "currency"
+      "pick": "row",
+      "anchor": "Troca de Para-choque",
+      "starts_with": true,
+      "xmin": 340,
+      "xmax": 420,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "min_value": 1,
+      "format": "currency"
     },
-
     "para_brisas": {
-      "pick": "text_regex", "page": 1,
-      "regex": "Para-Brisa e Traseiro\\):\\s*(R\\$ ?[\\d.]+,\\d{2})", "format": "currency"
+      "pick": "text_regex",
+      "regex": "Para-Brisa e Traseiro\\):\\s*(R\\$ ?[\\d.]+,\\d{2})",
+      "format": "currency"
     },
-
     "farois": {
-      "pick": "text_regex", "page": 1,
-      "regex": "Far[oó]is/Lanternas:\\s*(R\\$ ?[\\d.]+,\\d{2})", "format": "currency"
+      "pick": "text_regex",
+      "regex": "Far[oó]is/Lanternas:\\s*(R\\$ ?[\\d.]+,\\d{2})",
+      "format": "currency"
     },
-
     "lanternas": {
-      "pick": "text_regex", "page": 1,
-      "regex": "Far[oó]is/Lanternas:\\s*(R\\$ ?[\\d.]+,\\d{2})", "format": "currency"
+      "pick": "text_regex",
+      "regex": "Far[oó]is/Lanternas:\\s*(R\\$ ?[\\d.]+,\\d{2})",
+      "format": "currency"
     },
-
     "retrovisores": {
-      "pick": "text_regex", "page": 1,
-      "regex": "Retrovisores:\\s*(R\\$ ?[\\d.]+,\\d{2})", "format": "currency"
+      "pick": "text_regex",
+      "regex": "Retrovisores:\\s*(R\\$ ?[\\d.]+,\\d{2})",
+      "format": "currency"
     },
-
     "diarias_carro_reserva": {
-      "pick": "text_regex", "page": 2,
+      "pick": "text_regex",
       "regex": "Carro Reserva.{0,40}?(\\d{1,2}\\s*dias)"
     },
-
     "a_vista": {
-      "pick": "row", "page": 2, "anchor": "Valor total", "exact": true,
-      "regex": "R\\$ ?[\\d.]+,\\d{2}", "min_value": 100, "format": "currency"
+      "pick": "row",
+      "anchor": "Valor total",
+      "exact": true,
+      "regex": "R\\$ ?[\\d.]+,\\d{2}",
+      "min_value": 100,
+      "format": "currency"
     },
-
     "parc_4x": {
-      "pick": "under", "page": 3, "anchor": "4x", "exact": true,
+      "pick": "under",
+      "anchor": "4x",
+      "exact": true,
       "section": "1 BOLETO / DEMAIS C. CORRENTE",
       "section_end": "1 DEBITO C. CORRENTE / DEMAIS CARNÊ",
-      "at_x": 175.6, "xlo": 14, "xhi": 25, "dy": 30,
-      "regex": "^[\\d.]+,\\d{2}$", "not_regex": "%", "min_value": 10, "format": "currency"
+      "at_x": 175.6,
+      "xlo": 14,
+      "xhi": 25,
+      "dy": 30,
+      "regex": "^[\\d.]+,\\d{2}$",
+      "not_regex": "%",
+      "min_value": 10,
+      "format": "currency"
     },
-
     "parc_6x": {
-      "pick": "under", "page": 3, "anchor": "6x", "exact": true,
+      "pick": "under",
+      "anchor": "6x",
+      "exact": true,
       "section": "1 BOLETO / DEMAIS C. CORRENTE",
       "section_end": "1 DEBITO C. CORRENTE / DEMAIS CARNÊ",
-      "at_x": 265.6, "xlo": 14, "xhi": 25, "dy": 30,
-      "regex": "^[\\d.]+,\\d{2}$", "not_regex": "%", "min_value": 10, "format": "currency"
+      "at_x": 265.6,
+      "xlo": 14,
+      "xhi": 25,
+      "dy": 30,
+      "regex": "^[\\d.]+,\\d{2}$",
+      "not_regex": "%",
+      "min_value": 10,
+      "format": "currency"
     },
-
     "parc_10x": {
-      "pick": "under", "page": 3, "anchor": "10x", "exact": true,
+      "pick": "under",
+      "anchor": "10x",
+      "exact": true,
       "section": "1 BOLETO / DEMAIS C. CORRENTE",
       "section_end": "1 DEBITO C. CORRENTE / DEMAIS CARNÊ",
-      "at_x": 443.6, "xlo": 14, "xhi": 25, "dy": 30,
-      "regex": "^[\\d.]+,\\d{2}$", "not_regex": "%", "min_value": 10, "format": "currency"
+      "at_x": 443.6,
+      "xlo": 14,
+      "xhi": 25,
+      "dy": 30,
+      "regex": "^[\\d.]+,\\d{2}$",
+      "not_regex": "%",
+      "min_value": 10,
+      "format": "currency"
     }
   }
 }

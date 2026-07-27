@@ -14,13 +14,11 @@
   "fields": {
     "seguradora": {
       "pick": "text_regex",
-      "page": 4,
       "anchor": "Porto Seguro Cia de Seguros Gerais",
       "regex": "Porto Seguro"
     },
     "segurado": {
       "pick": "under",
-      "page": 1,
       "anchor": "Segurado(a)",
       "exact": true,
       "at_x": 30,
@@ -33,7 +31,6 @@
     },
     "principal_condutor": {
       "pick": "under",
-      "page": 1,
       "anchor": "Condutor",
       "exact": true,
       "at_x": 29,
@@ -46,7 +43,6 @@
     },
     "veiculo": {
       "pick": "under",
-      "page": 1,
       "anchor": "Veículo",
       "exact": true,
       "occurrence": 2,
@@ -60,7 +56,6 @@
     },
     "ano_modelo": {
       "pick": "under",
-      "page": 1,
       "anchor": "Ano Fabricação",
       "at_x": 455,
       "xlo": 12,
@@ -76,7 +71,6 @@
     },
     "data_proposta": {
       "pick": "under",
-      "page": 1,
       "anchor": "Realizado",
       "exact": true,
       "at_x": 197,
@@ -88,7 +82,6 @@
     },
     "validade": {
       "pick": "under",
-      "page": 1,
       "anchor": "Validade",
       "exact": true,
       "at_x": 268,
@@ -100,7 +93,6 @@
     },
     "uso_veiculo": {
       "pick": "under",
-      "page": 1,
       "anchor": "Tipo de uso",
       "exact": true,
       "at_x": 29,
@@ -112,7 +104,6 @@
     },
     "cep_circulacao": {
       "pick": "under",
-      "page": 1,
       "anchor": "CEP de pernoite",
       "exact": true,
       "at_x": 203,
@@ -124,7 +115,6 @@
     },
     "colisao_incendio_roubo": {
       "pick": "under",
-      "page": 1,
       "anchor": "Compreensiva (Colisão",
       "starts_with": true,
       "at_x": 29,
@@ -142,7 +132,6 @@
     },
     "franquia_veiculo": {
       "pick": "row",
-      "page": 1,
       "anchor": "Compreensiva (Colisão",
       "starts_with": true,
       "xmin": 340,
@@ -153,7 +142,6 @@
     },
     "rcf_danos_materiais": {
       "pick": "row",
-      "page": 1,
       "anchor": "RCF-V Danos Materiais",
       "exact": true,
       "xmin": 240,
@@ -164,7 +152,6 @@
     },
     "rcf_danos_pessoais": {
       "pick": "row",
-      "page": 1,
       "anchor": "RCF-V Danos Corporais",
       "exact": true,
       "xmin": 240,
@@ -175,7 +162,6 @@
     },
     "protecao_pneu_roda_suspensao": {
       "pick": "under",
-      "page": 1,
       "anchor": "Roda, Pneu e Suspensão",
       "exact": true,
       "at_x": 362,
@@ -187,7 +173,6 @@
     },
     "reparo_amassados": {
       "pick": "row",
-      "page": 1,
       "anchor": "Pequenos Reparos",
       "starts_with": true,
       "xmin": 340,
@@ -197,7 +182,6 @@
     },
     "reparo_para_choque": {
       "pick": "row",
-      "page": 1,
       "anchor": "Troca de Para-choque",
       "starts_with": true,
       "xmin": 340,
@@ -207,35 +191,30 @@
     },
     "para_brisas": {
       "pick": "text_regex",
-      "page": 1,
       "anchor": "Franquias: Vidros Para-Brisa",
       "regex": "Para-Brisa[^:]{0,40}:\\s*(R\\$ ?[\\d.]+,\\d{2})",
       "format": "currency"
     },
     "farois": {
       "pick": "text_regex",
-      "page": 1,
       "anchor": "Faróis Convencionais",
       "regex": "Convencionais, Milha e Neblina:\\s*(R\\$ ?[\\d.]+,\\d{2})",
       "format": "currency"
     },
     "lanternas": {
       "pick": "text_regex",
-      "page": 1,
       "anchor": "Lanternas Convencionais",
       "regex": "^Convencionais:\\s*(R\\$ ?[\\d.]+,\\d{2})",
       "format": "currency"
     },
     "retrovisores": {
       "pick": "text_regex",
-      "page": 1,
       "anchor": "Retrovisores",
       "regex": "Retrovisores\\s*:\\s*(R\\$ ?[\\d.]+,\\d{2})",
       "format": "currency"
     },
     "km_reboque": {
       "pick": "text_regex",
-      "page": 2,
       "anchor": "Assistência Km ilimitado",
       "regex": "Assist[êe]ncia (Km ilimitado)",
       "replace": [
@@ -247,7 +226,6 @@
     },
     "assistencia_residencial": {
       "pick": "text_regex",
-      "page": 2,
       "anchor": "Serviços para a Residência",
       "regex": "Servi[çc]os para a Resid[êe]ncia",
       "replace": [
@@ -259,13 +237,11 @@
     },
     "diarias_carro_reserva": {
       "pick": "text_regex",
-      "page": 2,
       "anchor": "Carro Reserva",
       "regex": "Carro Reserva[^0-9]{0,40}(\\d{1,2}\\s*dias?)"
     },
     "a_vista": {
       "pick": "row",
-      "page": 2,
       "anchor": "Valor total",
       "exact": true,
       "xmin": 470,
@@ -275,7 +251,6 @@
     },
     "parc_4x": {
       "pick": "under",
-      "page": 3,
       "section": "TODAS CARTÃO DE CRÉDITO - DEMAIS BANDEIRAS",
       "section_end": "TODAS DÉBITO C. CORRENTE",
       "anchor": "4x",
@@ -289,7 +264,6 @@
     },
     "parc_6x": {
       "pick": "under",
-      "page": 3,
       "section": "TODAS CARTÃO DE CRÉDITO - DEMAIS BANDEIRAS",
       "section_end": "TODAS DÉBITO C. CORRENTE",
       "anchor": "6x",
@@ -303,7 +277,6 @@
     },
     "parc_10x": {
       "pick": "under",
-      "page": 3,
       "section": "TODAS CARTÃO DE CRÉDITO - DEMAIS BANDEIRAS",
       "section_end": "TODAS DÉBITO C. CORRENTE",
       "anchor": "10x",

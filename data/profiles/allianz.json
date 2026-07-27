@@ -1,15 +1,22 @@
 {
   "id": "allianz",
   "label": "Allianz Seguros — Cotação Allianz Auto (multi-oferta)",
-  "match": ["allianz seguros", "seguro allianz auto"],
+  "match": [
+    "allianz seguros",
+    "seguro allianz auto"
+  ],
   "priority": 10,
   "fields": {
     "seguradora": {
       "pick": "text_regex",
       "regex": "Allianz Seguros",
-      "replace": [["^.+$", "Allianz Seguros"]]
+      "replace": [
+        [
+          "^.+$",
+          "Allianz Seguros"
+        ]
+      ]
     },
-
     "segurado": {
       "pick": "kv",
       "anchor": "Nome",
@@ -20,7 +27,6 @@
       "min_len": 6,
       "max_words": 8
     },
-
     "principal_condutor": {
       "pick": "kv",
       "anchor": "Nome",
@@ -31,157 +37,133 @@
       "min_len": 6,
       "max_words": 8
     },
-
     "veiculo": {
       "pick": "kv",
       "anchor": "Veículo",
       "exact": true,
-      "page": 1,
       "min_len": 8,
       "not_regex": "^(FIPE|Placa|Chassi)"
     },
-
     "ano_modelo": {
       "pick": "kv",
       "anchor": "Ano/Modelo",
       "exact": true,
-      "page": 1,
       "regex": "\\d{4}(?:/\\d{4})?"
     },
-
     "uso_veiculo": {
       "pick": "kv",
       "anchor": "Finalidade de Uso",
       "exact": true,
-      "page": 1,
       "format": "upper"
     },
-
     "cep_circulacao": {
       "pick": "kv",
       "anchor": "CEP Pernoite",
       "exact": true,
-      "page": 1,
       "regex": "\\d{5}-?\\d{3}",
       "format": "cep"
     },
-
     "condutores_18_26": {
       "pick": "kv",
       "anchor": "idade entre 18 a 25 anos",
-      "page": 1,
       "regex": "^(N[ãa]o|Sim)",
       "format": "simnao"
     },
-
     "data_proposta": {
       "pick": "text_regex",
-      "page": 1,
       "regex": "\\d{2}-\\d{2}-\\d{4}",
-      "replace": [["(\\d{2})-(\\d{2})-(\\d{4})", "\\3-\\2-\\1"]]
+      "replace": [
+        [
+          "(\\d{2})-(\\d{2})-(\\d{4})",
+          "\\3-\\2-\\1"
+        ]
+      ]
     },
-
     "validade": {
       "pick": "text_regex",
-      "page": 1,
       "regex": "cota[çc][ãa]o at[ée] (\\d{2}/\\d{2}/\\d{4})",
       "format": "date_iso"
     },
-
     "colisao_incendio_roubo": {
       "pick": "text_regex",
-      "page": 1,
       "regex": "(\\d{1,3}% FIPE)",
       "format": "upper"
     },
-
     "km_reboque": {
       "pick": "kv",
       "anchor": "furto qualificado",
-      "page": 3,
       "min_len": 3,
       "max_words": 3
     },
-
     "diarias_carro_reserva": {
       "pick": "text_regex",
-      "page": 3,
       "section": "CARRO RESERVA",
       "section_end": "FRANQUIA - PARTICIPAÇÃO OBRIGATÓRIA",
       "regex": "(\\d{1,2} dias)",
       "format": "title"
     },
-
     "franquia_veiculo": {
       "pick": "text_regex",
-      "page": 3,
       "section": "FRANQUIA - PARTICIPAÇÃO OBRIGATÓRIA",
       "section_end": "ASSISTÊNCIA A VIDROS",
       "regex": "([\\d.]+,\\d{2})",
       "min_value": 500,
       "format": "currency"
     },
-
     "para_brisas": {
       "pick": "row",
       "anchor": "Parabrisa",
       "exact": true,
-      "page": 3,
       "section": "ASSISTÊNCIA A VIDROS",
       "section_end": "Sinistros de Vidros",
       "regex": "[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "farois": {
       "pick": "row",
       "anchor": "Farol Convencional",
       "exact": true,
-      "page": 3,
       "section": "ASSISTÊNCIA A VIDROS",
       "section_end": "Sinistros de Vidros",
       "regex": "[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "lanternas": {
       "pick": "row",
       "anchor": "Lanterna Convencional",
       "exact": true,
-      "page": 3,
       "section": "ASSISTÊNCIA A VIDROS",
       "section_end": "Sinistros de Vidros",
       "regex": "[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "retrovisores": {
       "pick": "row",
       "anchor": "Retrovisores",
       "exact": true,
-      "page": 3,
       "section": "ASSISTÊNCIA A VIDROS",
       "section_end": "Sinistros de Vidros",
       "regex": "[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "protecao_pneu_roda_suspensao": {
       "pick": "row",
       "anchor": "Proteção Pneu e Roda",
       "exact": true,
-      "page": 3,
       "section": "ASSISTÊNCIA A VIDROS",
       "section_end": "Sinistros de Vidros",
       "regex": "[\\d.]+,\\d{2}",
       "format": "currency"
     },
-
     "assistencia_residencial": {
       "pick": "text_regex",
-      "page": 4,
       "regex": "passa a dispor, gratuitamente, de servi",
-      "replace": [["^.+$", "Sim"]]
+      "replace": [
+        [
+          "^.+$",
+          "Sim"
+        ]
+      ]
     }
   }
 }

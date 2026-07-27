@@ -9,7 +9,6 @@
   "fields": {
     "seguradora": {
       "pick": "text_regex",
-      "page": 1,
       "regex": "(Bradesco\\s+Auto/Re)",
       "replace": [
         [
@@ -20,7 +19,6 @@
     },
     "segurado": {
       "pick": "kv",
-      "page": 1,
       "anchor": "Nome",
       "exact": true,
       "section": "DADOS DO PROPONENTE",
@@ -31,7 +29,6 @@
     },
     "principal_condutor": {
       "pick": "kv",
-      "page": 3,
       "anchor": "Nome",
       "exact": true,
       "section": "Características do principal condutor",
@@ -42,7 +39,6 @@
     },
     "veiculo": {
       "pick": "regex_near",
-      "page": 1,
       "anchor": "Tipo do Veículo",
       "span": 1,
       "regex": "(Tipo do Ve[ií]culo:\\s*.+?\\s+Chassi:.*?Marca:\\s*[A-Za-zÀ-ÿ0-9/.\\-]+)",
@@ -56,14 +52,12 @@
     },
     "ano_modelo": {
       "pick": "kv",
-      "page": 1,
       "anchor": "Ano Mod",
       "regex": "\\d{4}",
       "ytol": 0
     },
     "data_proposta": {
       "pick": "kv",
-      "page": 1,
       "anchor": "Data do 1",
       "regex": "\\d{2}/\\d{2}/\\d{4}",
       "format": "date_iso",
@@ -71,14 +65,12 @@
     },
     "validade": {
       "pick": "kv",
-      "page": 1,
       "anchor": "Cálculo válido até",
       "regex": "\\d{2}/\\d{2}/\\d{4}",
       "ytol": 0
     },
     "uso_veiculo": {
       "pick": "kv",
-      "page": 1,
       "anchor": "Uso Veículo",
       "exact": true,
       "regex": "[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ ]{3,}",
@@ -87,7 +79,6 @@
     },
     "cep_circulacao": {
       "pick": "kv",
-      "page": 1,
       "anchor": "CEP de Pernoite",
       "regex": "\\d{5}-?\\d{3}",
       "format": "cep",
@@ -95,7 +86,6 @@
     },
     "condutores_18_26": {
       "pick": "under",
-      "page": 3,
       "anchor": "OUTRO CONDUTOR ENTRE 18 E 2",
       "dy": 26,
       "xlo": 12,
@@ -105,7 +95,6 @@
     },
     "colisao_incendio_roubo": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Veículo",
       "exact": true,
       "section": "LIMITES MÁXIMOS DE INDENIZAÇÃO",
@@ -117,7 +106,6 @@
     },
     "rcf_danos_materiais": {
       "pick": "kv",
-      "page": 2,
       "anchor": "D.M.",
       "exact": true,
       "section": "LIMITES MÁXIMOS DE INDENIZAÇÃO",
@@ -129,7 +117,6 @@
     },
     "rcf_danos_pessoais": {
       "pick": "kv",
-      "page": 2,
       "anchor": "D.C.",
       "exact": true,
       "section": "LIMITES MÁXIMOS DE INDENIZAÇÃO",
@@ -141,7 +128,6 @@
     },
     "morte_pessoal_passageiro": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Morte p/ Passageiro",
       "exact": true,
       "section": "LIMITES MÁXIMOS DE INDENIZAÇÃO",
@@ -152,7 +138,6 @@
     },
     "acidente_pessoal_passageiro": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Invalidez p/ Passageiro",
       "exact": true,
       "section": "LIMITES MÁXIMOS DE INDENIZAÇÃO",
@@ -163,7 +148,6 @@
     },
     "km_reboque": {
       "pick": "text_regex",
-      "page": 1,
       "anchor": "Assist Auto",
       "section": "CLÁUSULAS",
       "regex": "assist\\.?\\s*auto[^()]*?(\\d{2,4}\\s*KM)",
@@ -171,7 +155,6 @@
     },
     "diarias_carro_reserva": {
       "pick": "text_regex",
-      "page": 1,
       "anchor": "Auto Reserva",
       "section": "CLÁUSULAS",
       "regex": "Auto Reserva\\s*(\\d{1,3}\\s*Dias?)",
@@ -185,7 +168,6 @@
     },
     "franquia_veiculo": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Veículo",
       "exact": true,
       "section": "FRANQUIAS",
@@ -197,7 +179,6 @@
     },
     "para_brisas": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Para-Brisa",
       "exact": true,
       "section": "FRANQUIAS",
@@ -209,7 +190,6 @@
     },
     "farois": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Faróis",
       "exact": true,
       "section": "FRANQUIAS",
@@ -221,7 +201,6 @@
     },
     "lanternas": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Lanternas",
       "exact": true,
       "section": "FRANQUIAS",
@@ -233,7 +212,6 @@
     },
     "retrovisores": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Retrovisores",
       "exact": true,
       "section": "FRANQUIAS",
@@ -245,7 +223,6 @@
     },
     "reparo_para_choque": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Troca de Para-choque",
       "exact": true,
       "section": "FRANQUIAS",
@@ -257,7 +234,6 @@
     },
     "reparo_amassados": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Super Martelinho",
       "exact": true,
       "section": "FRANQUIAS",
@@ -269,7 +245,6 @@
     },
     "protecao_pneu_roda_suspensao": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Rodas, Pneus e Suspensão",
       "exact": true,
       "section": "FRANQUIAS",
@@ -281,7 +256,6 @@
     },
     "assistencia_residencial": {
       "pick": "kv",
-      "page": 2,
       "anchor": "Prêmio Residencial",
       "exact": true,
       "section": "PRÊMIOS",
@@ -297,7 +271,6 @@
     },
     "a_vista": {
       "pick": "kv",
-      "page": 2,
       "anchor": "TOTAL A PAGAR",
       "exact": true,
       "section": "PRÊMIOS",
@@ -308,7 +281,6 @@
     },
     "parc_4x": {
       "pick": "row",
-      "page": 3,
       "anchor": "4x",
       "exact": true,
       "section": "PAGAMENTO",
@@ -321,7 +293,6 @@
     },
     "parc_6x": {
       "pick": "row",
-      "page": 3,
       "anchor": "6x",
       "exact": true,
       "section": "PAGAMENTO",
@@ -334,7 +305,6 @@
     },
     "parc_10x": {
       "pick": "row",
-      "page": 3,
       "anchor": "10x",
       "exact": true,
       "section": "PAGAMENTO",
