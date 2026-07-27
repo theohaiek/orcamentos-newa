@@ -947,6 +947,7 @@
       '<div class="wiz-steps" id="wiz-steps"></div>' +
       '<div class="wiz-body" id="wiz-body"></div>' +
       '<div class="wiz-foot"><div class="wiz-foot-l"><button class="btn secondary" id="wiz-fill">' + I.wand + " Preencher vazios</button>" +
+      '<button class="btn secondary" id="wiz-ok" hidden></button>' +
       '<button class="btn ghost" id="wiz-prev">' + I.back + " Anterior</button></div>" +
       '<div class="wiz-count" id="wiz-count"></div>' +
       '<button class="btn" id="wiz-next">Próximo</button></div></div>';
@@ -961,6 +962,27 @@
       const keys = dataKeys(true);
       S.proposal.columns.forEach((col) => keys.forEach((k) => { if (!String(col.fields[k] || "").trim()) col.fields[k] = "Não Contratado"; }));
       renderWizStep(); toast("Campos vazios preenchidos com “Não Contratado”.", "ok");
+    };
+    // Confirmar a etapa inteira. Conferir campo a campo é o certo quando são dois ou
+    // três; numa cotação multi-oferta são 20 de uma vez (a Allianz cota 3 planos lado
+    // a lado e nenhum valor que dependa do plano é confiável), e aí exigir clique em
+    // cada um vira obstáculo, não conferência — a pessoa clica nos 20 sem olhar.
+    // Como o assistente mostra o PDF de origem ao lado, com o trecho marcado, olhar a
+    // etapa e confirmar de uma vez É a conferência. O botão só aparece quando há o
+    // que confirmar, e diz quantos são.
+    $("#wiz-ok").onclick = () => {
+      const st = S._wiz.steps[S._wiz.step];
+      if (st.type !== "sec" && st.type !== "info") return;
+      let n = 0;
+      st.rows.forEach((r) => S.proposal.columns.forEach((col) => {
+        const p = col.provenance[r.key];
+        if (p && p.confidence === "baixa" && String(col.fields[r.key] || "").trim()) {
+          col.provenance[r.key] = Object.assign({}, p, { method: "manual", confidence: "manual" });
+          n++;
+        }
+      }));
+      renderWizStep();
+      toast(n ? n + " campo(s) desta etapa confirmados." : "Nada a confirmar aqui.", "ok");
     };
     $("#wiz-prev").onclick = () => { if (S._wiz.step > 0) { S._wiz.step--; renderWizStep(); } };
     $("#wiz-next").onclick = () => {
@@ -1014,6 +1036,20 @@
     const nv = pendingBreakdown().vazios;
     const fill = $("#wiz-fill");
     if (fill) { fill.classList.toggle("hot", nv > 0); fill.innerHTML = I.wand + (nv > 0 ? " Preencher " + nv + " vazio(s)" : " Preencher vazios"); }
+    // "Confirmar esta etapa" só existe quando há o que confirmar AQUI, e diz quantos
+    const bok = $("#wiz-ok");
+    if (bok) {
+      let n = 0;
+      if (st.type === "sec" || st.type === "info") {
+        st.rows.forEach((r) => P.columns.forEach((col) => {
+          const p = (col.provenance || {})[r.key];
+          if (p && p.confidence === "baixa" && String(col.fields[r.key] || "").trim()) n++;
+        }));
+      }
+      bok.hidden = n === 0;
+      bok.classList.toggle("hot", n > 0);
+      bok.innerHTML = I.check + " Confirmar " + n + " desta etapa";
+    }
     // body
     $("#wiz-body").innerHTML = wizStepBody(st);
     wireWizStep(st);
