@@ -163,13 +163,24 @@ chave da OpenAI e o corte de acesso a quem usa o build oficial — não os perfi
       atalhos no menu Iniciar e área de trabalho, desinstalador no Painel de Controle.
       Empacotar com PyInstaller em pasta (`_internal`), não arquivo único — arquivo único
       se descompacta a cada abertura e irrita o antivírus.
-- [ ] **Backend n8n**: `/auth` (whitelist, token de sessão curta), `/ia` (proxy da OpenAI
-      com a credencial guardada lá) e `/versao` + `/perfis/<arquivo>` servindo o manifesto.
-- [ ] App consumindo o backend; falha fechado quando não confirma o acesso.
+- [ ] **Backend n8n — um webhook só: `POST /auth`.** Recebe usuário e senha, valida
+      contra o banco (hash guardado lá, nunca a senha), devolve token de sessão com
+      validade. Sem whitelist e **sem senha local**: isso elimina o furo em que a senha
+      padrão `123` na máquina deixava entrar quem descobrisse um username. HTTPS é
+      obrigatório, porque a senha trafega. O token com validade permite trabalhar
+      offline até expirar, o que suaviza a dependência do servidor.
+- [ ] App consumindo o `/auth`; falha fechado quando não confirma o acesso. O
+      `users.json` local e o `hash_pw`/`check_pw` deixam de ser fonte de verdade no
+      build desktop — um só lugar decide quem entra.
+- [ ] **A chave da OpenAI é do cliente**, digitada uma vez em *Configurações* (o campo
+      já existe e guarda em `.devdata/config.json`, fora do repositório; o servidor só
+      devolve `has_openai_key`). Sem proxy `/ia`: o texto do PDF vai direto do app para
+      a OpenAI, então o n8n **não** entra na cadeia de dado pessoal, e a cota é do
+      cliente, na conta dele.
 - [ ] Publicação: rotina que gera `versao.json` com os hashes dos perfis e sobe o
       instalador, para o updater não depender de passo manual.
-- [ ] Rever o furo de acesso: whitelist remota com senha local padrão `123` não impede
-      quem descobrir um username de entrar na própria máquina.
+- [x] **Furo de acesso resolvido no desenho:** com o `/auth` validando usuário e senha
+      no servidor, some a senha local e o padrão `123` junto com ela.
 - [ ] Assinatura de código fica **fora** do escopo: a Microsoft declara que EV não evita
       mais o SmartScreen, e a reputação zera a cada versão. O aviso da primeira execução
       é aceito conscientemente.
