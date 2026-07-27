@@ -27,7 +27,14 @@ REPO = os.path.dirname(os.path.abspath(__file__))   # o motor mora no repositór
 HERE = os.path.dirname(REPO)                        # pasta-pai: .env e .devdata
 ASSETS = os.path.join(REPO, "orcamentos-newa", "assets")
 DATA = os.path.join(REPO, "data")
-DEV = os.path.join(HERE, ".devdata")           # persistência de dev (fora do repo)
+# Onde ficam usuários, configuração e uploads. Em desenvolvimento, na pasta-pai;
+# instalado, na pasta do usuário — a instalação em si pode estar em `Program Files`,
+# onde o processo não tem permissão de escrita.
+if getattr(sys, "frozen", False):
+    DEV = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
+                       "OrcamentosNEWA")
+else:
+    DEV = os.path.join(HERE, ".devdata")
 os.makedirs(DEV, exist_ok=True)
 UPLOADS = os.path.join(DEV, "uploads")          # PDFs enviados + páginas rasterizadas
 os.makedirs(UPLOADS, exist_ok=True)
@@ -799,13 +806,20 @@ class H(BaseHTTPRequestHandler):
         self.end_headers(); self.wfile.write(b)
 
     def serve_index(self):
-        """Serve o index com cache-bust (?v=mtime) nos assets locais — F5 sempre pega a versão nova."""
+        """Serve o index com cache-bust nos assets locais.
+
+        A marca é `versão do app + mtime do arquivo`. O mtime sozinho basta em
+        desenvolvimento, mas não em instalação: um instalador pode preservar a data
+        do arquivo, e aí a interface nova ficaria escondida atrás do CSS velho em
+        cache. A versão no meio garante que toda release invalide tudo.
+        """
         path = os.path.join(REPO, "index.html")
         if not os.path.exists(path): return self.send_json({"error": "not found"}, 404)
         html = open(path, encoding="utf-8").read()
         def ver(name):
             fp = os.path.join(ASSETS, name)
-            return str(int(os.path.getmtime(fp))) if os.path.exists(fp) else "0"
+            m = str(int(os.path.getmtime(fp))) if os.path.exists(fp) else "0"
+            return f"{updater.VERSION}-{m}"
         html = re.sub(r'(/assets/([\w./-]+\.(?:js|css)))',
                       lambda m: m.group(1) + "?v=" + ver(m.group(2)), html)
         b = html.encode("utf-8")
@@ -881,6 +895,9 @@ class H(BaseHTTPRequestHandler):
             if not u or not check_pw(str(d.get("password", "")), u["pw"]):
                 return self.send_json({"error": "invalid"}, 401)
             tok = new_session(u["username"])
+            # Todo login verifica atualização. É o que dá à usuária um jeito de forçar
+            # a busca sem saber que ela existe: sair e entrar de novo resolve.
+            threading.Thread(target=checar_atualizacao, daemon=True).start()
             return self.send_json({"user": pub(u)}, cookie=f"orca_sess={tok}; Path=/; HttpOnly; SameSite=Lax")
         if p == "/api/logout":
             return self.send_json({"ok": True}, cookie="orca_sess=; Path=/; Max-Age=0")

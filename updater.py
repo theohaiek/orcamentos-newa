@@ -36,7 +36,7 @@ instalação — em `C:\\Program Files` o processo não teria permissão de escr
 Os perfis que vieram no instalador continuam lá e servem de piso: o que é
 baixado se sobrepõe a eles por nome de arquivo.
 """
-import os, re, json, hashlib, tempfile
+import os, re, json, time, hashlib, secrets, tempfile
 import urllib.request, urllib.error
 
 VERSION = "0.4.0"
@@ -48,11 +48,27 @@ TIMEOUT = 6.0                 # curto de propósito: isto nunca pode segurar o a
 
 
 def _get(url, limite, timeout=TIMEOUT):
-    """Baixa `url` com teto de tamanho. Devolve bytes ou None — nunca levanta."""
+    """Baixa `url` com teto de tamanho. Devolve bytes ou None — nunca levanta.
+
+    Cache é o inimigo aqui. Entre nós e o arquivo pode haver a CDN do GitHub (que
+    guarda o raw por minutos), um proxy corporativo, ou um antivírus que
+    intercepta HTTPS — e qualquer um deles pode devolver a versão de ontem, o que
+    faria a atualização simplesmente não acontecer, em silêncio e sem erro.
+
+    Contra isso: cabeçalhos pedindo revalidação E um parâmetro único na URL. Os
+    cabeçalhos bastam para caches que respeitam a norma; o parâmetro resolve os
+    que não respeitam, porque para eles vira outra URL.
+    """
     if not url.lower().startswith(("https://", "http://127.0.0.1", "http://localhost")):
         return None                      # fora de HTTPS só o servidor local
+    sep = "&" if "?" in url else "?"
+    url = f"{url}{sep}_={int(time.time() * 1000)}-{secrets.token_hex(4)}"
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": f"OrcamentosNEWA/{VERSION}"})
+        req = urllib.request.Request(url, headers={
+            "User-Agent": f"OrcamentosNEWA/{VERSION}",
+            "Cache-Control": "no-cache, no-store, max-age=0",
+            "Pragma": "no-cache",
+        })
         with urllib.request.urlopen(req, timeout=timeout) as r:
             if r.status != 200:
                 return None

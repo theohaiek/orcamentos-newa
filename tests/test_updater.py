@@ -38,10 +38,16 @@ def sha(b):
 
 # --------------------------------------------------------- servidor de mentira
 ARQUIVOS = {}          # caminho -> bytes
+PEDIDOS = []           # caminho completo de cada requisição, com query
+CABECALHOS = []        # cabeçalhos de cada requisição
 
 class Mao(BaseHTTPRequestHandler):
     def do_GET(self):
-        dados = ARQUIVOS.get(self.path)
+        PEDIDOS.append(self.path)
+        CABECALHOS.append({k.lower(): v for k, v in self.headers.items()})
+        # o cliente acrescenta um parâmetro anti-cache; o servidor ignora a query
+        caminho = self.path.split("?", 1)[0]
+        dados = ARQUIVOS.get(caminho)
         if dados is None:
             self.send_response(404); self.end_headers(); return
         self.send_response(200)
@@ -131,6 +137,19 @@ ARQUIVOS["/versao.json"] = manifesto(app="0.1.0")
 ok(updater.verificar(BASE, LOCAL, BASEDIR)["app_novo"] is None, "versão menor nunca é oferecida")
 ARQUIVOS["/versao.json"] = manifesto(app="0.9.0", instalador="http://exemplo/inst.exe")
 ok(updater.verificar(BASE, LOCAL, BASEDIR)["instalador"] is None, "instalador fora de HTTPS é recusado")
+
+print(">> 8. defesas contra cache (CDN, proxy, antivírus que intercepta)")
+PEDIDOS.clear(); CABECALHOS.clear()
+ARQUIVOS["/versao.json"] = manifesto(perfis={"porto.json": sha(novo)})
+updater.verificar(BASE, LOCAL, BASEDIR)
+ok(all("?_=" in p or "&_=" in p for p in PEDIDOS), "toda URL leva parâmetro único")
+ok(len(set(PEDIDOS)) == len(PEDIDOS), "duas chamadas nunca repetem a mesma URL")
+h = CABECALHOS[0]
+ok("no-cache" in h.get("cache-control", ""), "Cache-Control: no-cache enviado")
+ok(h.get("pragma") == "no-cache", "Pragma: no-cache enviado (proxies antigos)")
+PEDIDOS.clear()
+updater.verificar(BASE, LOCAL, BASEDIR)
+ok(PEDIDOS and "?_=" in PEDIDOS[0], "a URL muda de uma verificação para a outra")
 
 srv.shutdown(); shutil.rmtree(tmp, ignore_errors=True)
 print(f"\n  RESULTADO: {'OK' if not falhas else 'FALHOU -> ' + '; '.join(falhas)}")
