@@ -157,12 +157,23 @@ chave da OpenAI e o corte de acesso a quem usa o build oficial — não os perfi
       silêncio e o app trabalha com o que tem. Versão nova do app é **anunciada**, nunca
       aplicada sozinha; downgrade nunca é oferecido. `GET /api/update` expõe o estado.
       17 asserções em [`tests/test_updater.py`](tests/test_updater.py), sem rede real.
-- [ ] **Casca `pywebview`**: janela nativa, ícone próprio (janela, `.exe`, barra de
-      tarefas, Alt-Tab), servidor local subindo antes da janela aparecer, DPI por monitor.
-- [ ] **Instalador Inno Setup**: instala em `%LOCALAPPDATA%` (sem pedir administrador),
-      atalhos no menu Iniciar e área de trabalho, desinstalador no Painel de Controle.
-      Empacotar com PyInstaller em pasta (`_internal`), não arquivo único — arquivo único
-      se descompacta a cada abertura e irrita o antivírus.
+- [x] **Casca `pywebview`** ([`app.py`](app.py)): janela nativa, ícone próprio, porta
+      livre em vez de fixa, janela só abre quando o servidor aceita conexão, DPI por
+      monitor, e recusa com explicação quando falta a runtime do WebView2 (sem ela o
+      pywebview cai no motor do Internet Explorer, onde a interface não roda).
+      `--verificar` prova o binário sem abrir janela.
+- [x] **Instalador** ([`instalador.py`](instalador.py)): executável de 8 MB que instala
+      em `%LOCALAPPDATA%` sem pedir administrador, cria atalho na Área de Trabalho e no
+      Menu Iniciar, escreve um desinstalador que preserva os dados, e prova a instalação
+      rodando `--verificar` antes de declarar sucesso. Funciona com o pacote ao lado
+      (zip extraído ou `git clone`), sozinho (baixa do GitHub) e por cima de uma
+      instalação anterior — comparando arquivo a arquivo, então não duplica nada.
+- [x] **O programa acompanha o repositório**: o executável carrega Python e as
+      bibliotecas; motor, interface e perfis vivem em `<instalação>/repo` e são
+      sincronizados a cada abertura e a cada login. Correção publicada chega ao usuário
+      no próximo login, sem reinstalar.
+- [x] **Build enxuto**: 942 MB → 82 MB. O PyInstaller arrastava o que estivesse
+      instalado no Python da máquina (torch, llvmlite, ffmpeg, scipy, onnxruntime).
 - [ ] **Backend n8n — um webhook só: `POST /auth`.** Recebe usuário e senha, valida
       contra o banco (hash guardado lá, nunca a senha), devolve token de sessão com
       validade. Sem whitelist e **sem senha local**: isso elimina o furo em que a senha
