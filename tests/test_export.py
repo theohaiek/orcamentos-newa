@@ -24,13 +24,20 @@ O que fica provado aqui:
 import json, os, sys, threading, urllib.error, urllib.request
 from http.server import ThreadingHTTPServer
 
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import server
 import fitz
 
 falhas = []
 def ok(cond, msg):
-    print(f"    [{'OK ' if cond else 'FALHA'}] {msg}")
+    # sem flush, uma queda mais adiante leva junto o que já foi impresso e o teste
+    # aparece no relatório sem uma linha sequer explicando onde parou
+    print(f"    [{'OK ' if cond else 'FALHA'}] {msg}", flush=True)
     if not cond:
         falhas.append(msg)
 
@@ -60,11 +67,20 @@ def pdf_de_verdade(altura=1400):
 print(">> 1. sem sessão não grava")
 ok(enviar(pdf_de_verdade())[0] == 401, "responde 401 sem login")
 
-r = urllib.request.Request(U + "/api/login",
-                           json.dumps({"username": "Madu", "password": "123"}).encode(),
-                           {"Content-Type": "application/json"})
-with urllib.request.urlopen(r) as x:
-    CK = x.headers.get("Set-Cookie").split(";")[0]
+# Falhar aqui com AttributeError deixava o teste sem nenhuma saída, e o relatório
+# só dizia FALHOU — sem pista do motivo. Erro de login é uma condição própria.
+try:
+    r = urllib.request.Request(U + "/api/login",
+                               json.dumps({"username": "Madu", "password": "123"}).encode(),
+                               {"Content-Type": "application/json"})
+    with urllib.request.urlopen(r, timeout=15) as x:
+        CK = (x.headers.get("Set-Cookie") or "").split(";")[0]
+    if not CK:
+        raise RuntimeError("o login não devolveu cookie de sessão")
+except Exception as e:
+    print(f"\n  RESULTADO: FALHOU -> não consegui autenticar para testar: {e}", flush=True)
+    httpd.shutdown()
+    sys.exit(1)
 
 print(">> 2. grava de verdade, e o sucesso é verificável")
 dados = pdf_de_verdade()
