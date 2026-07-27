@@ -434,14 +434,28 @@
   // preenchido mas NÃO CONFIRMADO. Contar as duas no mesmo número e chamar tudo de
   // "vazio" mandava a pessoa procurar campo em branco que não existia.
   function pendingBreakdown() {
-    const P = S.proposal, r = { vazios: 0, semConfirmar: 0 };
-    tpl().info.forEach((x) => { if (x.show && x.req && !String(P.info[x.key] || "").trim()) r.vazios++; });
+    const P = S.proposal, r = { vazios: 0, semConfirmar: 0, itens: [] };
+    const rotulo = (k) => {
+      for (const s of tpl().sections) for (const x of s.rows) if (x.key === k) return x.label;
+      for (const x of tpl().info) if (x.key === k) return x.label;
+      return k;
+    };
+    tpl().info.forEach((x) => {
+      if (x.show && x.req && !String(P.info[x.key] || "").trim()) {
+        r.vazios++; r.itens.push({ tipo: "vazio", key: x.key, label: x.label, coluna: "—" });
+      }
+    });
     const keys = dataKeys(false);
-    P.columns.forEach((col) => keys.forEach((k) => {
-      if (!String(col.fields[k] || "").trim()) { r.vazios++; return; }
+    P.columns.forEach((col, ci) => keys.forEach((k) => {
+      const cn = (insurerById(col.insurer_id) || {}).name || "coluna " + (ci + 1);
+      if (!String(col.fields[k] || "").trim()) {
+        r.vazios++; r.itens.push({ tipo: "vazio", key: k, label: rotulo(k), coluna: cn }); return;
+      }
       // Entregar um valor que o sistema não conseguiu confirmar é exatamente o que
       // não pode acontecer — mas isso se resolve conferindo, não preenchendo.
-      if ((col.provenance[k] || {}).confidence === "baixa") r.semConfirmar++;
+      if ((col.provenance[k] || {}).confidence === "baixa") {
+        r.semConfirmar++; r.itens.push({ tipo: "conferir", key: k, label: rotulo(k), coluna: cn });
+      }
     }));
     r.total = r.vazios + r.semConfirmar;
     return r;
@@ -451,10 +465,19 @@
 
   function pendingMsg() {
     const b = pendingBreakdown();
+    // Dizer só "15 campos" manda a pessoa caçar. Nomear os campos e a coluna é a
+    // diferença entre um aviso e uma instrução — e foi o que revelou, na prática,
+    // pendência em campo que nenhuma etapa do assistente mostrava.
+    console.table(b.itens);
+    const lista = (tipo) => {
+      const it = b.itens.filter((x) => x.tipo === tipo);
+      const nomes = [...new Set(it.map((x) => x.label + (x.coluna !== "—" ? " (" + x.coluna + ")" : "")))];
+      return nomes.slice(0, 4).join(", ") + (nomes.length > 4 ? " e mais " + (nomes.length - 4) : "");
+    };
     const partes = [];
-    if (b.vazios) partes.push(b.vazios + " campo(s) em branco — preencha ou use “Preencher vazios”");
-    if (b.semConfirmar) partes.push(b.semConfirmar + " campo(s) a conferir — clique em cada um destacado e tecle Enter para confirmar");
-    return partes.join(". ") + ".";
+    if (b.vazios) partes.push(b.vazios + " em branco: " + lista("vazio"));
+    if (b.semConfirmar) partes.push(b.semConfirmar + " a conferir: " + lista("conferir"));
+    return partes.join(" · ");
   }
 
   function renderReview() {
@@ -975,6 +998,7 @@
       if (st.type !== "sec" && st.type !== "info") return;
       let n = 0;
       st.rows.forEach((r) => S.proposal.columns.forEach((col) => {
+        if (!col.provenance) col.provenance = {};      // coluna sem proveniência quebrava o laço aqui
         const p = col.provenance[r.key];
         if (p && p.confidence === "baixa" && String(col.fields[r.key] || "").trim()) {
           col.provenance[r.key] = Object.assign({}, p, { method: "manual", confidence: "manual" });
