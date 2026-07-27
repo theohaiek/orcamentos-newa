@@ -140,7 +140,8 @@ console.log(">> guarda: as funções ainda existem no app.js");
  * que produziram um PDF ruim ou inexistente. */
 console.log(">> guarda: exportação do PDF");
 ok(/toDataURL\("image\/png"\)/.test(src), "captura em PNG — JPEG deixa chiado em volta das letras");
-ok(!/toDataURL\("image\/jpeg"/.test(src), "nenhum resquício de JPEG na exportação");
+ok(/toDataURL\("image\/jpeg", q\)/.test(src), "JPEG só como recurso quando o PNG não cabe no e-mail");
+ok(/img\.length > TETO/.test(src), "a troca é decidida por tamanho, não fixa");
 ok(/Math\.min\(3,\s*LIM \/ Math\.max/.test(src), "escala adaptativa: 3x de teto, caindo para caber no canvas");
 ok(/if \(!canvas\.width \|\| !canvas\.height\) throw/.test(src), "captura vazia vira erro, não PDF em branco");
 ok(/fetch\("\/api\/save-pdf"/.test(src), "grava pelo servidor, não pelo download do navegador");

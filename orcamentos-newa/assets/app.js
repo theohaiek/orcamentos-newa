@@ -861,13 +861,28 @@
       // chegaria lá — e o PDF sairia em branco anunciando sucesso. Por isso a escala
       // cai sozinha até caber.
       const LIM = 12000;                    // margem folgada sob o limite dos navegadores
+      const TETO = 6 * 1024 * 1024;         // orçamento por página; a proposta vai por e-mail
       const fotos = [];
       for (const pag of pages) {
         const alvo = Math.max(1, Math.min(3, LIM / Math.max(pag.scrollWidth, pag.scrollHeight)));
         const escala = Math.round(alvo * 10) / 10;
         const canvas = await window.html2canvas(pag, { scale: escala, useCORS: true, backgroundColor: "#ffffff" });
         if (!canvas.width || !canvas.height) throw new Error("a captura da página saiu vazia");
-        fotos.push({ img: canvas.toDataURL("image/png"), h: PW * (canvas.height / canvas.width) });
+
+        // PNG primeiro, porque é sem perda e o documento é texto e cor chapada — o
+        // conteúdo em que o JPEG deixa chiado em volta das letras. Mas PNG de página
+        // alta explode de tamanho, e uma proposta que não passa no anexo de e-mail
+        // não serve para nada. Então: PNG quando cabe no orçamento, JPEG de alta
+        // qualidade quando não cabe. A 300 DPI o artefato do JPEG é imperceptível;
+        // o que incomodava antes era ele somado aos 198 DPI.
+        let img = canvas.toDataURL("image/png");
+        if (img.length > TETO) {
+          for (const q of [0.96, 0.92, 0.86]) {
+            img = canvas.toDataURL("image/jpeg", q);
+            if (img.length <= TETO) break;
+          }
+        }
+        fotos.push({ img, h: PW * (canvas.height / canvas.width) });
       }
       if (!fotos.length) throw new Error("nada para exportar");
 
