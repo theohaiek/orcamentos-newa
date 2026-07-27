@@ -884,43 +884,52 @@
       // chegaria lá — e o PDF sairia em branco anunciando sucesso. Por isso a escala
       // cai sozinha até caber.
       const LIM = 12000;                    // margem folgada sob o limite dos navegadores
-      const TETO = 6 * 1024 * 1024;         // orçamento por página; a proposta vai por e-mail
-      const fotos = [];
+      const TETO = 18 * 1024 * 1024;        // a proposta vai por e-mail; 18 MB é folgado
+
+      // Captura uma vez só — html2canvas é a parte cara. A qualidade da compressão
+      // é decidida depois, sobre o mesmo canvas.
+      const telas = [];
       for (const pag of pages) {
         const alvo = Math.max(1, Math.min(3, LIM / Math.max(pag.scrollWidth, pag.scrollHeight)));
-        const escala = Math.round(alvo * 10) / 10;
-        const canvas = await window.html2canvas(pag, { scale: escala, useCORS: true, backgroundColor: "#ffffff" });
+        const canvas = await window.html2canvas(pag, { scale: Math.round(alvo * 10) / 10,
+                                                       useCORS: true, backgroundColor: "#ffffff" });
         if (!canvas.width || !canvas.height) throw new Error("a captura da página saiu vazia");
-
-        // PNG primeiro, porque é sem perda e o documento é texto e cor chapada — o
-        // conteúdo em que o JPEG deixa chiado em volta das letras. Mas PNG de página
-        // alta explode de tamanho, e uma proposta que não passa no anexo de e-mail
-        // não serve para nada. Então: PNG quando cabe no orçamento, JPEG de alta
-        // qualidade quando não cabe. A 300 DPI o artefato do JPEG é imperceptível;
-        // o que incomodava antes era ele somado aos 198 DPI.
-        let img = canvas.toDataURL("image/png");
-        if (img.length > TETO) {
-          for (const q of [0.96, 0.92, 0.86]) {
-            img = canvas.toDataURL("image/jpeg", q);
-            if (img.length <= TETO) break;
-          }
-        }
-        fotos.push({ img, h: PW * (canvas.height / canvas.width) });
+        telas.push(canvas);
       }
-      if (!fotos.length) throw new Error("nada para exportar");
+      if (!telas.length) throw new Error("nada para exportar");
 
-      // A FOLHA se adapta ao conteúdo, e não o contrário. Antes, quando a imagem
-      // era mais alta que um A4, ela era encolhida INTEIRA até caber — o comparativo
-      // saía com 58% da largura, 4,4 cm de branco de cada lado e texto a 5,9pt, e
-      // piorava a cada cobertura a mais. Agora a largura é sempre a de um A4 e a
-      // altura acompanha a proporção, então o PDF fica idêntico ao que está na tela.
-      const fmt = (f) => [PW, f.h];
-      const pdf = new jsPDF({ unit: "pt", format: fmt(fotos[0]),
-                              orientation: fotos[0].h >= PW ? "portrait" : "landscape" });
-      fotos.forEach((f, i) => {
-        if (i > 0) pdf.addPage(fmt(f), f.h >= PW ? "portrait" : "landscape");
-        pdf.addImage(f.img, "JPEG", 0, 0, PW, f.h);
-      });
+      // JPEG, e não PNG. Não é preferência de qualidade — é o que o jsPDF sabe
+      // embutir sem reprocessar: JPEG entra como está (DCTDecode), enquanto PNG é
+      // convertido para RGB cru, e uma página de 2460x6084 vira ~45 MB dentro do
+      // arquivo. Foi isso que estourou o limite do servidor. Com `compress: true`
+      // o resto do PDF também é comprimido.
+      //
+      // A qualidade cai por passo até o arquivo caber no teto, e o resultado é
+      // conferido no fim: se ainda assim não couber, a exportação falha com uma
+      // mensagem clara em vez de mandar ao servidor algo que será recusado.
+      //
+      // A FOLHA se adapta ao conteúdo, e não o contrário. Antes, imagem mais alta
+      // que um A4 era encolhida INTEIRA até caber, e o comparativo saía com 58% da
+      // largura, 4,4 cm de branco de cada lado e texto a 5,9pt.
+      let blob = null;
+      for (const q of [0.94, 0.88, 0.8, 0.7, 0.6]) {
+        const fotos = telas.map((c) => ({ img: c.toDataURL("image/jpeg", q),
+                                          h: PW * (c.height / c.width) }));
+        const fmt = (f) => [PW, f.h];
+        const pdf = new jsPDF({ unit: "pt", format: fmt(fotos[0]), compress: true,
+                                orientation: fotos[0].h >= PW ? "portrait" : "landscape" });
+        fotos.forEach((f, i) => {
+          if (i > 0) pdf.addPage(fmt(f), f.h >= PW ? "portrait" : "landscape");
+          pdf.addImage(f.img, "JPEG", 0, 0, PW, f.h);
+        });
+        blob = pdf.output("blob");
+        if (blob.size <= TETO) break;
+      }
+      if (!blob) throw new Error("não foi possível montar o PDF");
+      if (blob.size > TETO) {
+        throw new Error("o documento ficou grande demais (" + Math.round(blob.size / 1048576) +
+                        " MB). Compare menos propostas por vez.");
+      }
       const nome = (S.proposal.info.segurado || "cliente").split(" ")[0].toLowerCase();
       // Gravar pelo servidor local em vez do download do navegador: numa janela de
       // aplicativo o download depende do delegate da casca (o pywebview vem com ele
@@ -930,7 +939,7 @@
         method: "POST",
         headers: { "Content-Type": "application/pdf",
                    "X-Nome-Arquivo": encodeURIComponent("proposta-newa-" + nome + ".pdf") },
-        body: pdf.output("blob"),
+        body: blob,
       });
       const res = await r.json().catch(() => ({}));
       if (!r.ok || !res.ok) throw new Error(res.error || "o arquivo não pôde ser gravado");
