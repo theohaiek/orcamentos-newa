@@ -28,6 +28,8 @@ orcamentos-newa/assets/logos/_map.json
 *.log
 dist/
 build/
+# o instalador FICA no repositorio: e o que a pagina inicial oferece
+!Instalar Orcamentos NEWA.exe
 *.zip
 
 # Amostras com dados reais de cliente — nunca versionar

@@ -181,6 +181,82 @@ def verificar(base_url, pasta_perfis, pasta_base=None, aplicar=True):
     return r
 
 
+ZIP_REPO = "https://codeload.github.com/theohaiek/orcamentos-newa/zip/refs/heads/main"
+MAX_ZIP = 40 * 1024 * 1024
+
+# O que a sincronização mantém em dia. Testes, documentação e scripts de build não
+# vão para a máquina do usuário; e nada fora desta lista é escrito, então um
+# repositório adulterado não consegue plantar arquivo em lugar nenhum.
+SINCRONIZAR = ("app.py", "server.py", "extract_engine.py", "updater.py", "index.html",
+               "data/", "orcamentos-newa/")
+
+
+def _permitido(rel):
+    rel = rel.replace("\\", "/")
+    if ".." in rel.split("/") or rel.startswith("/") or ":" in rel:
+        return False
+    if "/__pycache__/" in rel or rel.endswith(".pyc"):
+        return False
+    return any(rel == p or (p.endswith("/") and rel.startswith(p)) for p in SINCRONIZAR)
+
+
+def sincronizar_repo(pasta_repo, url=ZIP_REPO, timeout=60.0):
+    """Põe a pasta `repo` da instalação em dia com o repositório.
+
+    Atualizar só os perfis resolvia meia dúvida: um conserto no motor ou na
+    interface continuaria preso na máquina de quem desenvolve. Aqui o programa
+    inteiro acompanha o repositório — é por isso que o executável carrega apenas
+    Python e as bibliotecas, e o código de verdade mora em `repo`.
+
+    Baixa o `.zip` do branch (o repositório todo tem menos de 1 MB, então comparar
+    arquivo a arquivo é mais simples e mais confiável que manter um manifesto) e
+    grava só o que difere, de forma atômica.
+
+    Nunca levanta e nunca apaga nada: arquivo que sumiu do repositório continua em
+    disco. Remover é mais arriscado do que deixar sobrar, e sobrar não quebra —
+    o que não é referenciado simplesmente não é lido.
+    """
+    r = {"ok": False, "erro": None, "atualizados": [], "iguais": 0}
+    if not pasta_repo:
+        r["erro"] = "sem pasta"; return r
+    dados = _get(url, MAX_ZIP, timeout)
+    if dados is None:
+        r["erro"] = "sem resposta"; return r
+
+    import io, zipfile
+    try:
+        z = zipfile.ZipFile(io.BytesIO(dados))
+    except Exception:
+        r["erro"] = "pacote inválido"; return r
+
+    nomes = z.namelist()
+    if not nomes:
+        r["erro"] = "pacote vazio"; return r
+    raiz = nomes[0].split("/")[0] + "/"          # o GitHub embrulha em "<repo>-<branch>/"
+    try:
+        for n in nomes:
+            if n.endswith("/") or not n.startswith(raiz):
+                continue
+            rel = n[len(raiz):]
+            if not _permitido(rel):
+                continue
+            novo = z.read(n)
+            destino = os.path.join(pasta_repo, *rel.split("/"))
+            if os.path.exists(destino):
+                try:
+                    if _sha(open(destino, "rb").read()) == _sha(novo):
+                        r["iguais"] += 1
+                        continue
+                except OSError:
+                    pass
+            if _grava_atomico(destino, novo):
+                r["atualizados"].append(rel)
+    except Exception as e:
+        r["erro"] = str(e); return r
+    r["ok"] = True
+    return r
+
+
 def _maior(a, b):
     """Compara versões `1.2.3`. Não-numérico perde, para nunca oferecer downgrade."""
     def part(v):

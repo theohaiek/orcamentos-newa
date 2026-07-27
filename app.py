@@ -26,6 +26,47 @@ from http.server import ThreadingHTTPServer
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
 
+
+def _delegar_ao_repo():
+    """Instalado, o programa roda o código da pasta `repo`, não o que veio embutido.
+
+    É o que faz a atualização automática valer para o programa inteiro, e não só
+    para os perfis: o executável carrega Python e as bibliotecas — que mudam raro —
+    enquanto motor, interface e perfis vivem em `repo`, sincronizados com o
+    repositório. Uma correção publicada hoje chega ao usuário no próximo login,
+    sem reinstalar nada.
+
+    Só acontece no executável empacotado e uma vez só, pela variável de ambiente:
+    o código do repositório é este mesmo arquivo, e sem a trava ele se chamaria em
+    laço.
+    """
+    if not getattr(sys, "frozen", False) or os.environ.get("NEWA_DELEGADO") == "1":
+        return False
+    repo = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(sys.executable))), "repo")
+    alvo = os.path.join(repo, "app.py")
+    if not (os.path.isfile(alvo) and os.path.isfile(os.path.join(repo, "server.py"))):
+        return False
+    try:
+        import runpy
+        os.environ["NEWA_DELEGADO"] = "1"
+        sys.path.insert(0, repo)
+        runpy.run_path(alvo, run_name="__main__")
+        return True
+    except SystemExit:
+        return True
+    except Exception as e:
+        # Repositório quebrado não pode impedir o programa de abrir: cai para a
+        # cópia embutida, que é a que veio testada no instalador.
+        sys.stderr.write(f"[aviso] não consegui usar o código de 'repo' ({e}); usando o embutido\n")
+        os.environ.pop("NEWA_DELEGADO", None)
+        if repo in sys.path:
+            sys.path.remove(repo)
+        return False
+
+
+if _delegar_ao_repo():
+    sys.exit(0)
+
 import webview
 import server
 import updater
@@ -135,7 +176,58 @@ def aviso(titulo, corpo, altura=340):
     webview.start()
 
 
+def verificar():
+    """Confere o build sem abrir janela:  Orcamentos NEWA.exe --verificar
+
+    Um executável empacotado quebra de um jeito que o código-fonte não quebra —
+    biblioteca que ficou de fora, arquivo de dados que não foi junto, DLL nativa
+    ausente. Descobrir isso na máquina do cliente é tarde. Aqui o próprio binário
+    prova que sobe, serve a interface, enxerga os perfis e consegue ler um PDF.
+    """
+    import urllib.request
+    falhas = []
+    def ok(c, m):
+        print(f"  [{'OK ' if c else 'FALHA'}] {m}")
+        if not c: falhas.append(m)
+
+    print(f"Orçamentos NEWA {updater.VERSION} — verificação do build")
+    print(f"  empacotado: {bool(getattr(sys, 'frozen', False))}\n  raiz: {AQUI}")
+
+    import extract_engine as EE
+    perfis = EE.load_profiles(server.PROFILES_DIR, server.PROFILES_LOCAL)
+    ok(len(perfis) >= 15, f"perfis carregados: {len(perfis)}")
+    ok(os.path.exists(os.path.join(AQUI, "orcamentos-newa", "assets", "app.js")), "assets presentes")
+    ok(os.path.exists(os.path.join(AQUI, "index.html")), "index.html presente")
+
+    url, httpd = subir_servidor()
+    ok(esperar(httpd.server_address[1]), "servidor respondeu")
+    for rota, esperado in (("/", 200), ("/api/me", 401)):
+        try:
+            with urllib.request.urlopen(url.rstrip("/") + rota, timeout=6) as r:
+                got = r.status
+        except Exception as e:
+            got = getattr(e, "code", str(e))
+        ok(got == esperado, f"{rota} -> {got}")
+
+    amostras = os.path.join(os.path.dirname(AQUI), "Modelo-Inputs")
+    pdfs = sorted(f for f in os.listdir(amostras) if f.lower().endswith(".pdf")) \
+        if os.path.isdir(amostras) else []
+    if pdfs:
+        pages = EE.tokenize(open(os.path.join(amostras, pdfs[0]), "rb").read())
+        prof = EE.match_profile(pages, perfis)
+        campos = EE.run_profile(pages, prof)["fields"] if prof else {}
+        ok(len(campos) >= 15, f"extração real ({pdfs[0]}): {len(campos)} campos por {prof['id'] if prof else '-'}")
+    else:
+        print("  [nota] sem Modelo-Inputs ao lado: extração não exercitada")
+
+    httpd.shutdown()
+    print(f"\n  RESULTADO: {'OK' if not falhas else 'FALHOU -> ' + '; '.join(falhas)}")
+    return 1 if falhas else 0
+
+
 def main():
+    if "--verificar" in sys.argv:
+        return verificar()
     ajustar_windows()
 
     if not tem_webview2():

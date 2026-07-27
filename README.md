@@ -1,21 +1,63 @@
-# Orçamentos NEWA · v0.3
+# Orçamentos NEWA · v0.4
 
 Aplicativo para **gerar propostas comparativas de seguro auto** a partir dos PDFs de
 cotação de várias seguradoras. Você envia os PDFs, o app reconhece e normaliza os
 campos automaticamente, confere **de onde veio cada dado** e exporta uma
-**Proposta de Seguro** de 2 páginas (capa personalizada + comparativo lado a lado),
-pronta para enviar ao cliente.
+**Proposta de Seguro** (capa personalizada + comparativo lado a lado), pronta para
+enviar ao cliente.
 
-Hoje roda localmente para desenvolvimento/edição ao vivo do visual. A forma de
-distribuição — **plugin WordPress** ou **aplicativo desktop instalável** — está em
-aberto; as duas são tecnicamente viáveis.
+---
+
+## Instalar (Windows)
+
+Baixe **[`Instalar Orcamentos NEWA.exe`](Instalar%20Orcamentos%20NEWA.exe)** aqui de
+cima e execute. Instala na pasta do usuário, **sem pedir senha de administrador**, e
+cria atalho na Área de Trabalho e no Menu Iniciar.
+
+Na primeira execução o Windows mostra *"O Windows protegeu seu computador"* — é o aviso
+padrão para programa sem certificado de assinatura. Clique em **Mais informações** e
+**Executar assim mesmo**.
+
+O instalador funciona de três formas, e descobre sozinho em qual está:
+
+| você tem | o que ele faz |
+|---|---|
+| só o instalador | baixa o programa e o código deste repositório |
+| o `.zip` deste repositório extraído, ou um `git clone` | usa os arquivos do disco, sem baixar nada |
+| já instalado | atualiza só o que mudou; usuários, configuração e propostas ficam intactos |
+
+Para remover: `Desinstalar.bat`, dentro de `%LOCALAPPDATA%\OrcamentosNEWA`. Seus dados
+não são apagados.
+
+### O programa se mantém atualizado sozinho
+
+O executável carrega o Python e as bibliotecas — que mudam raramente. **O motor, a
+interface e os perfis das seguradoras ficam numa pasta `repo`, sincronizada com este
+repositório**, e é ela que o programa executa. Uma correção publicada aqui chega a
+quem usa **no próximo login**, sem reinstalar nada.
+
+A verificação acontece ao abrir o programa e a cada login — então sair e entrar de novo
+serve de "procurar atualizações". Sem internet, o programa abre normalmente com o que
+já tem em disco.
+
+```
+%LOCALAPPDATA%\OrcamentosNEWA\
+├─ app\      o programa (Python embutido; só muda em versão nova)
+├─ repo\     motor, interface e perfis — é o que se mantém em dia
+└─ …         seus usuários, configuração e propostas
+```
+
+---
+
+Para desenvolvimento e edição ao vivo do visual, veja
+[Desenvolvimento local](#desenvolvimento-local-edição-ao-vivo).
 
 > **Sobre a distribuição (2026-07-26):** uma medição anterior concluiu que o motor não
 > poderia ser portado para PHP e descartou o WordPress. **Aquela medição estava errada**
 > — o defeito era do script de teste, não da biblioteca. Refeita: o motor roda em PHP
 > com **93% da cobertura** que tem em Python, com os perfis intocados. Números e o custo
-> real do port em [`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md). O desenho do
-> app desktop continua válido como alternativa:
+> real do port em [`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md). O caminho
+> escolhido foi o **app desktop**:
 > [`docs/superpowers/specs/2026-07-25-app-desktop-design.md`](docs/superpowers/specs/2026-07-25-app-desktop-design.md).
 
 > **Status:** v0.3 — funcional ponta a ponta em desenvolvimento local (servidor Python

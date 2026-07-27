@@ -1017,7 +1017,22 @@ def pub(u):
 ATUALIZACAO = {"app": updater.VERSION, "verificado": False}
 
 def checar_atualizacao():
-    r = updater.verificar(get_config().get("update_url", ""), PROFILES_LOCAL, PROFILES_DIR)
+    cfg = get_config()
+    r = updater.verificar(cfg.get("update_url", ""), PROFILES_LOCAL, PROFILES_DIR)
+
+    # Instalado, o código vive em `<instalação>/repo` e é ele que o programa roda
+    # (ver app.py). Sincronizar essa pasta é o que faz uma correção publicada hoje
+    # chegar ao usuário no próximo login — sem reinstalar nada. Rodando do
+    # código-fonte não há o que sincronizar: a pasta É o repositório de trabalho.
+    if REPO.replace("\\", "/").rstrip("/").endswith("/repo"):
+        s = updater.sincronizar_repo(REPO, cfg.get("repo_zip_url") or updater.ZIP_REPO)
+        r["repo"] = {"ok": s["ok"], "erro": s["erro"],
+                     "atualizados": s["atualizados"], "iguais": s["iguais"]}
+        if s["atualizados"]:
+            print(f"  {len(s['atualizados'])} arquivo(s) do programa atualizados "
+                  f"(vale ao reabrir): {', '.join(s['atualizados'][:5])}"
+                  f"{'…' if len(s['atualizados']) > 5 else ''}")
+
     ATUALIZACAO.clear(); ATUALIZACAO.update(r)
     if r.get("perfis_atualizados"):
         print(f"  perfis atualizados: {', '.join(r['perfis_atualizados'])}")

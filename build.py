@@ -19,8 +19,19 @@ import os, shutil, subprocess, sys
 AQUI = os.path.dirname(os.path.abspath(__file__))
 NOME = "Orcamentos NEWA"
 ICONE = os.path.join(AQUI, "orcamentos-newa", "assets", "app.ico")
-SAIDA = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(AQUI, "dist")
+_livres = [a for a in sys.argv[1:] if not a.startswith("--")]
+SAIDA = os.path.abspath(_livres[0]) if _livres else os.path.join(AQUI, "dist")
 TRABALHO = os.path.join(AQUI, "build")
+
+EXCLUIR = [
+    "torch", "torchvision", "torchaudio", "llvmlite", "numba", "onnxruntime",
+    "scipy", "pandas", "matplotlib", "sklearn", "cv2", "av", "imageio",
+    "imageio_ffmpeg", "transformers", "tokenizers", "datasets", "sympy",
+    "networkx", "IPython", "jupyter", "notebook", "nbformat", "nbconvert",
+    "pytest", "PyQt5", "PyQt6", "PySide2", "PySide6", "tkinter", "test",
+    "sqlite3", "lib2to3", "pydoc_data", "setuptools", "pip", "wheel",
+    "numpy", "PIL", "lxml", "cryptography", "pytz", "dateutil", "yaml",
+]
 
 # origem (relativa ao repo) -> destino dentro do pacote
 DADOS = [
@@ -30,7 +41,29 @@ DADOS = [
 ]
 
 
+def build_instalador(saida):
+    """O instalador é um executável à parte, e de propósito pequeno.
+
+    Ele não embute PyMuPDF nem o resto: só precisa de `zipfile` e `urllib`, ambos
+    da biblioteca padrão. Assim ele cabe no repositório sem inchar o histórico, e
+    quem baixa só o instalador baixa poucos megabytes.
+    """
+    cmd = [sys.executable, "-m", "PyInstaller", "instalador.py",
+           "--name", "Instalar Orcamentos NEWA",
+           "--noconfirm", "--clean", "--onefile", "--console",
+           "--icon", ICONE,
+           "--distpath", saida,
+           "--workpath", os.path.join(TRABALHO, "inst"),
+           "--specpath", os.path.join(TRABALHO, "inst")]
+    for m in EXCLUIR + ["pymupdf", "fitz", "openai", "webview", "pydantic", "httpx"]:
+        cmd += ["--exclude-module", m]
+    print("\n  empacotando o instalador\n")
+    return subprocess.run(cmd, cwd=AQUI).returncode
+
+
 def main():
+    if "--instalador" in sys.argv:
+        return build_instalador(SAIDA)
     if not os.path.exists(ICONE):
         print(f"!! ícone não encontrado: {ICONE}")
         return 1
@@ -52,6 +85,12 @@ def main():
     # enxerga esses imports percorrendo o código.
     for m in ("webview.platforms.winforms", "clr_loader", "pythonnet"):
         cmd += ["--hidden-import", m]
+    # Sem isto o pacote sai com 942 MB. O PyInstaller segue imports opcionais das
+    # bibliotecas e acaba arrastando o que estiver instalado no Python da máquina —
+    # aqui vieram torch (365 MB), llvmlite, ffmpeg, scipy, onnxruntime, pandas...
+    # O app usa PyMuPDF, o cliente da OpenAI e o pywebview. Nada disso entra.
+    for m in EXCLUIR:
+        cmd += ["--exclude-module", m]
 
     print(f"  empacotando em {SAIDA}\n")
     r = subprocess.run(cmd, cwd=AQUI)
