@@ -127,14 +127,24 @@ def _build_lines(toks):
 
 
 # ---------------------------------------------------------------- perfis
-def load_profiles(profiles_dir):
-    profs = []
-    for f in sorted(glob.glob(os.path.join(profiles_dir, "*.json"))):
-        try:
-            profs.append(json.load(open(f, encoding="utf-8")))
-        except Exception:
-            pass
-    return profs
+def load_profiles(*profiles_dirs):
+    """Carrega os perfis de uma ou mais pastas, na ordem dada.
+
+    Mesmo nome de arquivo numa pasta posterior SUBSTITUI o da anterior. É assim
+    que o perfil baixado pela atualização se sobrepõe ao que veio no instalador
+    sem precisar escrever dentro da pasta de instalação (que em `Program Files`
+    não é gravável).
+    """
+    por_nome = {}
+    for d in profiles_dirs:
+        if not d:
+            continue
+        for f in sorted(glob.glob(os.path.join(d, "*.json"))):
+            try:
+                por_nome[os.path.basename(f).lower()] = json.load(open(f, encoding="utf-8"))
+            except Exception:
+                pass
+    return [por_nome[k] for k in sorted(por_nome)]
 
 
 def match_profile(pages, profiles):

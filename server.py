@@ -20,6 +20,8 @@ import os, sys, json, io, re, hmac, hashlib, secrets, threading, webbrowser, mim
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, unquote, parse_qs
 
+import updater
+
 PORT = 8080
 REPO = os.path.dirname(os.path.abspath(__file__))   # o motor mora no repositório
 HERE = os.path.dirname(REPO)                        # pasta-pai: .env e .devdata
@@ -58,6 +60,11 @@ def jwrite(path, obj):
 DEFAULT_MODEL = "gpt-5-nano"
 DEFAULT_EFFORT = "low"
 
+# Perfis baixados pela atualização automática. Ficam FORA da instalação porque
+# em `Program Files` o processo não tem escrita; sobrepõem os de `data/profiles`
+# por nome de arquivo (ver extract_engine.load_profiles).
+PROFILES_LOCAL = os.path.join(DEV, "profiles")
+
 USERS_F = os.path.join(DEV, "users.json")
 CONFIG_F = os.path.join(DEV, "config.json")
 INS_F = os.path.join(DEV, "insurers.json")
@@ -83,6 +90,10 @@ def seed():
             "model": DEFAULT_MODEL,
             "reasoning_effort": DEFAULT_EFFORT,
             "openai_key": os.environ.get("OPENAI_API_KEY", ""),
+            # URL base da atualização automática dos perfis. Vazia = desligada.
+            # Aceita tanto o raw de um repositório público quanto um webhook do
+            # n8n com o repositório privado atrás — o cliente é o mesmo.
+            "update_url": os.environ.get("UPDATE_URL", ""),
             "corretora": {
                 "nome": "NEWA Seguros", "email": "newaseguros@newaseguros.com.br",
                 "site": "newaseguros.com.br", "telefone": "(11) 4040-3665",
@@ -287,7 +298,7 @@ def _field_terms(key):
     """Termos-rótulo do campo: os curados acima + as âncoras reais dos perfis."""
     import extract_engine as EE
     if not _ANCHOR_CACHE:
-        for prof in EE.load_profiles(PROFILES_DIR):
+        for prof in EE.load_profiles(PROFILES_DIR, PROFILES_LOCAL):
             for k, spec in (prof.get("fields") or {}).items():
                 for s in (spec if isinstance(spec, list) else [spec]):
                     if isinstance(s, dict) and s.get("anchor"):
@@ -534,7 +545,7 @@ def extract_pdf(pdf_bytes, filename=""):
     prof_total = 0
 
     # --- Camada 1: determinístico por perfil ---
-    all_profiles = EE.load_profiles(PROFILES_DIR)
+    all_profiles = EE.load_profiles(PROFILES_DIR, PROFILES_LOCAL)
     prof = EE.match_profile(pages, all_profiles)
     if prof:
         profile_used = True
@@ -851,6 +862,11 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/template":
             if not self.user(): return self.send_json({"error": "unauth"}, 401)
             return self.send_json(get_template())
+        if p == "/api/update":
+            if not self.user(): return self.send_json({"error": "unauth"}, 401)
+            if parse_qs(urlparse(self.path).query).get("agora"):
+                checar_atualizacao()
+            return self.send_json(dict(ATUALIZACAO))
         if p == "/api/users":
             u = self.user()
             if not u or u["role"] != "admin": return self.send_json({"error": "forbidden"}, 403)
@@ -928,10 +944,23 @@ class H(BaseHTTPRequestHandler):
 def pub(u):
     return None if not u else {"username": u["username"], "name": u.get("name", u["username"]), "role": u.get("role", "user")}
 
+# =============================== atualização ===============================
+# Estado da última verificação, lido por GET /api/update. A verificação roda numa
+# thread ao subir o servidor: sem rede ou com o servidor de atualização fora do ar
+# ela falha em silêncio e o app trabalha com os perfis que já tem em disco.
+ATUALIZACAO = {"app": updater.VERSION, "verificado": False}
+
+def checar_atualizacao():
+    r = updater.verificar(get_config().get("update_url", ""), PROFILES_LOCAL, PROFILES_DIR)
+    ATUALIZACAO.clear(); ATUALIZACAO.update(r)
+    if r.get("perfis_atualizados"):
+        print(f"  perfis atualizados: {', '.join(r['perfis_atualizados'])}")
+
 def main():
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
     url = f"http://localhost:{PORT}/"
-    print(f"\n  Orçamentos NEWA — dev server\n  {url}\n  (usuário: Madu / senha: 123)\n  Ctrl+C para parar.\n")
+    print(f"\n  Orçamentos NEWA {updater.VERSION} — dev server\n  {url}\n  (usuário: Madu / senha: 123)\n  Ctrl+C para parar.\n")
+    threading.Thread(target=checar_atualizacao, daemon=True).start()
     threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try: srv.serve_forever()
     except KeyboardInterrupt: print("\n  encerrado.")

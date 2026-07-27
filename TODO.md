@@ -113,9 +113,12 @@ no trabalho da v0.3. O que já foi corrigido:
 
 - [ ] **Trocar a chave da OpenAI.** Ela esteve exposta por path traversal num servidor
       em execução. Trocar e recriar o `.env`.
-- [ ] **Decidir sobre o histórico do git.** O CPF saiu do arquivo mas continua nos
-      commits anteriores e em `origin/main`. Limpar exige reescrita de histórico
-      (`git filter-repo` + `push --force`) — decisão do dono do repositório.
+- [x] **Histórico do git limpo.** O CPF foi redigido em todos os commits com
+      `git filter-repo` e o histórico reescrito foi publicado; um clone novo do remoto
+      não tem mais o dado. Uma varredura junto encontrou e removeu um segundo caso da
+      mesma origem — o CEP real de uma amostra usado como exemplo em `docs/perfis.md`.
+      **Ressalva:** o GitHub ainda serve os commits antigos por SHA direto até rodar o
+      próprio garbage collect; para garantia, abrir chamado no suporte.
 - [ ] **Redigir dados pessoais antes de enviar à OpenAI.** Hoje vai o **texto integral**
       do PDF: nome, CPF, CEP, placa, chassi. A spec do app desktop afirma o contrário
       ("nenhum PDF sai da máquina") e precisa ser corrigida ou o código, ajustado.
@@ -123,38 +126,61 @@ no trabalho da v0.3. O que já foi corrigido:
       `aliro/parc_10x`, `yelum/veiculo`) antes de qualquer uso do port em produção.
 - [ ] **Escolha de oferta pelo usuário** em PDFs multi-oferta: hoje só avisamos. O certo
       é listar as ofertas e deixar escolher.
-- [ ] **Versionar o motor.** `server.py` e `extract_engine.py` produzem todos os números
-      publicados e não estão sob controle de versão em lugar nenhum.
+- [x] **Motor versionado.** `server.py`, `extract_engine.py` e `index.html` entraram no
+      repositório.
 - [ ] **Reavaliar o `gpt-5-nano`.** A métrica que sustentou a escolha só comparava
       campos que o modelo preencheu, escondendo dois terços da distância: cobertura
       correta real de **44%** contra 69,4% do `gpt-4o-mini`.
 
-## Distribuição (v0.4 → V1) — decisão em aberto
+## Distribuição (v0.4 → V1) — DECIDIDO: app desktop Windows
 
-As duas vias são viáveis; ver [`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md)
-(PHP entrega 93% da cobertura) e
+O WordPress fica de fora. O motor continua em Python, o app vira executável
+Windows com janela própria, e o n8n entra **só** para guardar a chave da OpenAI e
+validar acesso — nunca para processar PDF. Servidor n8n já disponível, com uptime
+saudável. Avaliação que sustenta a escolha:
+[`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md) e
 [`docs/superpowers/specs/2026-07-25-app-desktop-design.md`](docs/superpowers/specs/2026-07-25-app-desktop-design.md).
 
-**Se for plugin WordPress:**
-- [ ] Portar o motor para PHP sobre `smalot/pdfparser`, tratando `Do` (Form XObject),
-      `/Contents` em array e ligando `setDataTmFontInfoHasToBeIncluded(true)`.
-- [ ] Reconstrução de palavras por métrica de glifo (é o que recupera `hdi` e `justos`).
-- [ ] Login via usuários nativos do WordPress; persistência em `wp_options`.
-- [ ] Empacotador `.zip` do plugin.
+Nota sobre o repositório público: cogitou-se abrir o repo para o auto-update puxar
+direto do `raw.githubusercontent`. Não é preciso — o n8n serve o mesmo manifesto com o
+repositório privado atrás, e o cliente de atualização é o mesmo (só muda a URL). Vale
+lembrar que abrir o repo **não** seria "carro sem chave": Python empacotado é
+desempacotável e a verificação de acesso, removível. O que o n8n protege de fato é a
+chave da OpenAI e o corte de acesso a quem usa o build oficial — não os perfis.
 
-**Se for app desktop:**
-- [ ] **Portão de validação:** protótipo `pywebview` provando janela nativa, ícone na
-      taskbar/Dock, fluxo completo e — o que decide — **exportação do PDF no macOS**
-      (WebKit, não Chromium). Reprovando, a casca vira Electron.
-- [ ] Backend n8n: `/auth` (whitelist, token), `/ia` (proxy da OpenAI) e `/versao`.
+- [x] **Atualização automática dos perfis** ([`updater.py`](updater.py)): manifesto
+      `versao.json` com sha256 por perfil; baixa só o que mudou, confere o hash, recusa
+      o que não for perfil válido, grava de forma atômica em pasta gravável do usuário
+      (a instalação em `Program Files` não é gravável) e o perfil baixado se sobrepõe ao
+      instalado por nome. Nome de arquivo é validado contra `[a-z0-9_-]+\.json`, então
+      manifesto adulterado não escreve fora da pasta. Sem rede, a verificação falha em
+      silêncio e o app trabalha com o que tem. Versão nova do app é **anunciada**, nunca
+      aplicada sozinha; downgrade nunca é oferecido. `GET /api/update` expõe o estado.
+      17 asserções em [`tests/test_updater.py`](tests/test_updater.py), sem rede real.
+- [ ] **Casca `pywebview`**: janela nativa, ícone próprio (janela, `.exe`, barra de
+      tarefas, Alt-Tab), servidor local subindo antes da janela aparecer, DPI por monitor.
+- [ ] **Instalador Inno Setup**: instala em `%LOCALAPPDATA%` (sem pedir administrador),
+      atalhos no menu Iniciar e área de trabalho, desinstalador no Painel de Controle.
+      Empacotar com PyInstaller em pasta (`_internal`), não arquivo único — arquivo único
+      se descompacta a cada abertura e irrita o antivírus.
+- [ ] **Backend n8n**: `/auth` (whitelist, token de sessão curta), `/ia` (proxy da OpenAI
+      com a credencial guardada lá) e `/versao` + `/perfis/<arquivo>` servindo o manifesto.
 - [ ] App consumindo o backend; falha fechado quando não confirma o acesso.
-- [ ] Atualização automática: perfis/interface a quente, motor via instalador.
-- [ ] Build no GitHub Actions (matriz Windows + macOS) gerando `.exe` e `.dmg`.
+- [ ] Publicação: rotina que gera `versao.json` com os hashes dos perfis e sobe o
+      instalador, para o updater não depender de passo manual.
 - [ ] Rever o furo de acesso: whitelist remota com senha local padrão `123` não impede
       quem descobrir um username de entrar na própria máquina.
-
-**Em qualquer das duas:**
+- [ ] Assinatura de código fica **fora** do escopo: a Microsoft declara que EV não evita
+      mais o SmartScreen, e a reputação zera a cada versão. O aviso da primeira execução
+      é aceito conscientemente.
 - [ ] PDF escaneado: MinerU como serviço externo (segue fora do escopo por ora).
+
+**macOS — fora do escopo até haver um Mac para testar.** Três incógnitas impedem
+qualquer promessa: a exportação do PDF (`jsPDF.save()` dispara `<a download>` num
+`blob:`, e o `pywebview` vem com downloads desligados por padrão), a persistência do
+cookie de sessão em `http://127.0.0.1` no WKWebView, e a tabela do comparativo, que usa
+`var()` dentro de `repeat()` no grid — se falhar, a página 2 colapsa em vez de degradar.
+Some-se US$ 99/ano de Apple Developer Program.
 
 ## Geral
 

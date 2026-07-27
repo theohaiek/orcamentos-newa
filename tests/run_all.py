@@ -10,7 +10,7 @@ import os, subprocess, sys
 
 TESTS = os.path.dirname(os.path.abspath(__file__))
 ORDEM = ["test_traversal.py", "test_cobertura.py", "test_multioferta.py",
-         "test_verificacao_ia.py", "test_validacao_pdf.py"]
+         "test_verificacao_ia.py", "test_validacao_pdf.py", "test_updater.py"]
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
