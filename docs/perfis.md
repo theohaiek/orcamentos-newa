@@ -85,7 +85,7 @@ que ser comparáveis entre elas):
 - `uso_veiculo` — PARTICULAR / COMERCIAL.
 - `valor_fipe` — valor de mercado do veículo em R$ (não a LMI de terceiros).
 - `condutores_18_26` — Sim/Não (cobertura p/ condutor jovem).
-- `cep_circulacao` — CEP de pernoite (`58025-090`).
+- `cep_circulacao` — CEP de pernoite (`00000-000`).
 - `colisao_incendio_roubo` — a **modalidade da cobertura de casco**
   (`100% FIPE`, `Valor de Mercado Referenciado`, `95% FIPE`…), **não** o prêmio.
 - `rcf_danos_materiais` / `rcf_danos_pessoais` — **LMI** (limite máximo de
