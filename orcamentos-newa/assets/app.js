@@ -430,17 +430,31 @@
   /* =========================================================================
      REVIEW + DOCUMENTO (edição in-place)
      ========================================================================= */
-  function pending() {
-    const P = S.proposal; let n = 0;
-    tpl().info.forEach((r) => { if (r.show && r.req && !String(P.info[r.key] || "").trim()) n++; });
+  // Duas pendências diferentes, que pediam mensagens diferentes: campo VAZIO e campo
+  // preenchido mas NÃO CONFIRMADO. Contar as duas no mesmo número e chamar tudo de
+  // "vazio" mandava a pessoa procurar campo em branco que não existia.
+  function pendingBreakdown() {
+    const P = S.proposal, r = { vazios: 0, semConfirmar: 0 };
+    tpl().info.forEach((x) => { if (x.show && x.req && !String(P.info[x.key] || "").trim()) r.vazios++; });
     const keys = dataKeys(false);
     P.columns.forEach((col) => keys.forEach((k) => {
-      if (!String(col.fields[k] || "").trim()) { n++; return; }
-      // Campo preenchido mas NÃO confirmado conta como pendência: entregar um valor
-      // que o sistema não conseguiu confirmar é exatamente o que não pode acontecer.
-      if ((col.provenance[k] || {}).confidence === "baixa") n++;
+      if (!String(col.fields[k] || "").trim()) { r.vazios++; return; }
+      // Entregar um valor que o sistema não conseguiu confirmar é exatamente o que
+      // não pode acontecer — mas isso se resolve conferindo, não preenchendo.
+      if ((col.provenance[k] || {}).confidence === "baixa") r.semConfirmar++;
     }));
-    return n;
+    r.total = r.vazios + r.semConfirmar;
+    return r;
+  }
+
+  function pending() { return pendingBreakdown().total; }
+
+  function pendingMsg() {
+    const b = pendingBreakdown();
+    const partes = [];
+    if (b.vazios) partes.push(b.vazios + " campo(s) em branco — preencha ou use “Preencher vazios”");
+    if (b.semConfirmar) partes.push(b.semConfirmar + " campo(s) a conferir — clique em cada um destacado e tecle Enter para confirmar");
+    return partes.join(". ") + ".";
   }
 
   function renderReview() {
@@ -817,7 +831,7 @@
      EXPORT PDF (html2canvas + jsPDF)
      ========================================================================= */
   async function doExport(btnSel) {
-    if (pending() > 0) { toast("Há campos pendentes. Preencha antes de exportar.", "err"); return; }
+    if (pending() > 0) { toast(pendingMsg(), "err"); return; }
     if (!window.jspdf || !window.html2canvas) { toast("Bibliotecas de PDF não carregadas.", "err"); return; }
     const btn = document.querySelector(btnSel || "#expbtn"); const old = btn ? btn.innerHTML : "";
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Gerando…'; }
@@ -904,7 +918,7 @@
       if (n > 0) {
         const fp = S._wiz.steps.findIndex(stepHasPending);
         if (fp >= 0) { S._wiz.step = fp; renderWizStep(); }
-        toast(n + " campo(s) ainda vazio(s). Preencha os destacados em vermelho ou use “Preencher vazios”.", "err");
+        toast(pendingMsg(), "err");
         return;
       }
       doExport("#wiz-next");
@@ -915,7 +929,14 @@
   function stepHasPending(st) {
     const P = S.proposal;
     if (st.type === "info") return st.rows.some((r) => r.req && !String(P.info[r.key] || "").trim());
-    if (st.type === "sec") return st.rows.some((r) => !r.optional && P.columns.some((c) => !String(c.fields[r.key] || "").trim()));
+    if (st.type === "sec") return st.rows.some((r) => !r.optional && P.columns.some((c) => {
+      // Precisa considerar o campo A CONFERIR também, não só o vazio: contando só o
+      // vazio, uma pendência de conferência não pertencia a etapa nenhuma, o
+      // assistente não tinha para onde navegar e a pessoa levava o aviso sem que
+      // nada na tela mudasse — sem saber qual campo destravar.
+      if (!String(c.fields[r.key] || "").trim()) return true;
+      return ((c.provenance || {})[r.key] || {}).confidence === "baixa";
+    }));
     return false;
   }
 
@@ -935,9 +956,12 @@
     const last = W.step === steps.length - 1;
     $("#wiz-next").innerHTML = last ? I.dl + " Confirmar e gerar PDF" : "Próximo " + I.fwd;
     // botão "Preencher vazios" ganha destaque quando há pendências
-    const n = pending();
+    // O contador aqui é só dos VAZIOS — é o que este botão resolve. Usando o total
+    // de pendências, ele anunciava "Preencher 3 vazio(s)", não mexia em nada ao ser
+    // clicado (os 3 estavam preenchidos, só não confirmados) e o número não descia.
+    const nv = pendingBreakdown().vazios;
     const fill = $("#wiz-fill");
-    if (fill) { fill.classList.toggle("hot", n > 0); fill.innerHTML = I.wand + (n > 0 ? " Preencher " + n + " vazio(s)" : " Preencher vazios"); }
+    if (fill) { fill.classList.toggle("hot", nv > 0); fill.innerHTML = I.wand + (nv > 0 ? " Preencher " + nv + " vazio(s)" : " Preencher vazios"); }
     // body
     $("#wiz-body").innerHTML = wizStepBody(st);
     wireWizStep(st);
@@ -1088,7 +1112,27 @@
       el.addEventListener("blur", () => {
         const v = el.textContent.trim();
         if (el.dataset.winfo != null) S.proposal.info[el.dataset.winfo] = v;
-        else if (el.dataset.wk != null) S.proposal.columns[+el.dataset.wc].fields[el.dataset.wk] = v;
+        else if (el.dataset.wk != null) {
+          const col = S.proposal.columns[+el.dataset.wc], k = el.dataset.wk;
+          const mudou = String(col.fields[k] || "") !== v;
+          col.fields[k] = v;
+          // Mesma regra da tela de Revisão: editar à mão É a confirmação. Sem isto,
+          // o campo revisado aqui continuava contando como pendência e travava a
+          // geração — e o assistente é o fluxo que abre sozinho, então era o
+          // caminho em que a pessoa mais esbarrava.
+          if (v && (mudou || (col.provenance[k] || {}).confidence === "baixa")) {
+            const p = col.provenance[k] || {};
+            col.provenance[k] = { value: v, method: "manual", page: p.page || null,
+                                  bbox: p.bbox || null, snippet: v, anchor: null,
+                                  confidence: "manual" };
+          }
+          const cel = el.parentElement;
+          if (cel) {
+            el.classList.toggle("empty-req", !v);
+            const dot = cel.querySelector(".prov-dot");
+            if (dot) dot.className = "prov-dot " + (provClass(col.provenance[k]) || "");
+          }
+        }
         highlightFor(el.dataset.hl, false);
       });
       el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); el.blur(); } });
