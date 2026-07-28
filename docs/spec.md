@@ -75,8 +75,11 @@ certo foi a diferença entre 33% e ~80% de captura determinística**:
 5. **Camada 3 — IA (fallback)** só para os campos restantes; o valor é **ancorado e
    verificado por string-match** nos tokens (`method:"ai"`, `confidence:"verificada"`);
    sem match → `confidence:"baixa"` e o campo fica pendente.
-   Modelo padrão `gpt-5-nano` com `reasoning_effort` configurável (padrão `low`);
-   se a API recusar o valor do esforço, a chamada degrada em vez de falhar.
+   Modelo padrão `gpt-4o-mini` (69,4% de cobertura correta contra 44% do `gpt-5-nano`).
+   Para modelos de raciocínio há `reasoning_effort` configurável (padrão `low`); se a
+   API recusar o valor do esforço, a chamada degrada em vez de falhar.
+   A chave da OpenAI vem **só** do campo em *Configurações* — não há `.env` nem leitura
+   de variável de ambiente.
 6. Seguradora detectada em ordem de força da evidência: **campo `seguradora` extraído** →
    nome do arquivo → texto inteiro (último recurso, vence o marcador mais longo).
    Necessário porque cotações citam parceiros e a **seguradora congênere** da renovação:

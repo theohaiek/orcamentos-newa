@@ -1626,7 +1626,7 @@
       '<div class="stagger" style="max-width:640px;display:flex;flex-direction:column;gap:20px">' +
       '<div class="card pad"><h3 style="margin-bottom:14px">Integração de IA (OpenAI)</h3>' +
       '<div class="field"><label>Chave da API' + (cfg.has_openai_key ? " (configurada — deixe vazio para manter)" : "") + '</label><input class="input" id="cok" type="password" placeholder="sk-..."></div>' +
-      '<div class="field" style="margin-top:12px"><label>Modelo</label><input class="input" id="cmodel" value="' + esc(cfg.model || "gpt-5-nano") + '"></div>' +
+      '<div class="field" style="margin-top:12px"><label>Modelo</label><input class="input" id="cmodel" value="' + esc(cfg.model || "gpt-4o-mini") + '"></div>' +
       '<div class="field" style="margin-top:12px"><label>Esforço de raciocínio (modelos gpt-5 / o-series)</label>' +
       '<select class="input" id="ceffort">' +
       ["minimal", "low", "medium", "high"].map(function (e) {

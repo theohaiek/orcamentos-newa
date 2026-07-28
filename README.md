@@ -126,9 +126,10 @@ app-orçamentos-newa/
 └── TODO.md
 ```
 
-> O servidor de desenvolvimento (`server.py`, `extract_engine.py`) e o shell
-> (`index.html`) ficam **fora** deste repositório (na pasta-pai) — são ferramentas de
-> edição ao vivo e trazem a chave de API em `.env` (nunca versionada).
+> **A chave da OpenAI não mora em lugar nenhum deste repositório**, e nem na máquina de
+> quem desenvolve: não há `.env`, não há variável de ambiente, não há padrão embutido.
+> Ela é digitada em *Configurações* na máquina de quem usa e fica em `config.json`, fora
+> do repositório. A cota é da conta do cliente, e não há chave a vazar daqui.
 
 ---
 
@@ -136,16 +137,17 @@ app-orçamentos-newa/
 
 Pré-requisito: **Python 3.8+** com `pymupdf` e `openai` (`pip install pymupdf openai`).
 
-1. Na pasta-pai (que contém `server.py`), crie um `.env` a partir de
-   [`.env.example`](.env.example) com sua `OPENAI_API_KEY` (ou configure depois pela UI
-   em *Configurações*).
-2. Rode:
+1. Rode:
 
    ```
    python server.py
    ```
 
-3. Abre sozinho em `http://localhost:8080/` — entre com **Madu / 123**.
+2. Abre sozinho em `http://localhost:8080/` — entre com **Madu / 123**.
+
+3. A chave da OpenAI, se quiser exercitar a camada de IA, vai em *Configurações*.
+   Não existe `.env` nem variável de ambiente: **a única fonte da chave é esse campo**,
+   e ela fica em `config.json`, fora do repositório. É deliberado — ver abaixo.
 
 Edite os arquivos em `orcamentos-newa/assets/` e recarregue a página (F5) — o servidor
 injeta *cache-busting*, então um F5 normal já pega a versão nova.
@@ -181,7 +183,9 @@ injeta *cache-busting*, então um F5 normal já pega a versão nova.
    é verificação. Sem isso, o campo vai para conferência. Coberturas que o documento não
    menciona viram "Não consta no PDF" (cinza) — e só depois de conferir que nenhum
    rótulo do campo aparece no documento.
-   Modelo padrão: **`gpt-5-nano`**, com esforço de raciocínio ajustável em *Configurações*.
+   Modelo padrão: **`gpt-4o-mini`** — 69,4% de cobertura correta contra 44% do
+   `gpt-5-nano`, que ocupava esse lugar por uma medição que só olhava os campos
+   preenchidos. O modelo é editável em *Configurações*.
 
 ### Cobertura medida (15 PDFs de amostra, 31 campos)
 

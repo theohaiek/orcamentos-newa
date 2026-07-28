@@ -6,9 +6,8 @@ http.server (stdlib), sem dependência de framework. Abre o navegador sozinho.
 Rode:  python server.py          (ou, da pasta-pai, python server.py)
 Abre:  http://localhost:8080/
 
-Segredos e dados de execução ficam FORA do repositório, na pasta-pai:
-  ../.env        chave da OpenAI
-  ../.devdata/   usuários, config, uploads
+Dados de execução ficam FORA do repositório, na pasta-pai:
+  ../.devdata/   usuários, config (inclusive a chave da OpenAI), uploads
 
 API:
   POST /api/login  /api/logout            GET /api/me
@@ -39,33 +38,52 @@ os.makedirs(DEV, exist_ok=True)
 UPLOADS = os.path.join(DEV, "uploads")          # PDFs enviados + páginas rasterizadas
 os.makedirs(UPLOADS, exist_ok=True)
 
-# ---- chave OpenAI: de .env ou ambiente (nunca commitada) ----
-def load_env():
-    p = os.path.join(HERE, ".env")
-    if os.path.exists(p):
-        for line in open(p, encoding="utf-8"):
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip())
-load_env()
+# A chave da OpenAI tem UMA fonte: o campo em Configurações, digitado na máquina de
+# quem usa e guardado em `config.json`, fora do repositório. Não vem de `.env`, não
+# vem de variável de ambiente, não tem padrão embutido.
+#
+# Isso existe porque a chave anterior vazou: as rotas /assets e /data eram servidas
+# antes do login e sem contenção de caminho, então `/assets/../../../.env` entregava
+# o arquivo inteiro. O buraco do caminho já foi fechado, mas enquanto houvesse uma
+# chave em disco fora do controle de quem usa, um erro parecido voltaria a expor a
+# chave de outra pessoa. Sem cópia no ambiente de desenvolvimento não há o que vazar
+# daqui, e a cota é sempre da conta do cliente.
 
 # =============================== persistência ===============================
 def jread(path, default):
+    # utf-8-sig, e não utf-8: o Bloco de Notas, o PowerShell e boa parte das
+    # ferramentas do Windows gravam um BOM no começo do arquivo. Com `utf-8` puro esse
+    # BOM vira erro de parsing, e como a falha aqui é silenciosa o app voltava a TODOS
+    # os padrões sem avisar — os dados da corretora sumiam da proposta e ninguém sabia
+    # por quê. `utf-8-sig` lê com BOM e sem BOM.
     try:
-        return json.load(open(path, encoding="utf-8"))
+        return json.load(open(path, encoding="utf-8-sig"))
     except Exception:
         return default
 
 def jwrite(path, obj):
-    json.dump(obj, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
 
-# Modelo e esforço de raciocínio padrão da camada de fallback (IA).
-# Medido nos 15 PDFs de amostra: com 'minimal' o gpt-5-nano preenche 16/31 campos;
-# com 'low', 19/31 e ancora melhor. Como a IA hoje só cobre o resíduo do
-# determinístico, 'low' é o ponto de equilíbrio entre cobertura e latência.
-DEFAULT_MODEL = "gpt-5-nano"
+# Modelo padrão da camada de fallback (IA).
+#
+# Já foi `gpt-5-nano`, escolhido por uma comparação enviesada: ela media precisão
+# apenas sobre os campos que o modelo preencheu, o que premia quem deixa em branco.
+# Medido de novo por COBERTURA CORRETA sobre os 31 campos, o nano faz 44% e o
+# `gpt-4o-mini`, 69,4% — dois terços de diferença que a métrica antiga escondia.
+#
+# O custo por chamada do 4o-mini é maior, e pesa pouco: os perfis determinísticos já
+# entregam ~80% sozinhos, então a IA roda sobre um punhado de campos por documento.
+DEFAULT_MODEL = "gpt-4o-mini"
+
+# Só vale para modelos de raciocínio (ver `_is_reasoning`). O 4o-mini não é um deles:
+# recebe `temperature=0` no lugar. Fica configurável porque a escolha do modelo é.
 DEFAULT_EFFORT = "low"
+
+# Config gravada antes desta mudança continua pedindo o nano — trocar o padrão não
+# alcança quem já tem o app instalado. A migração roda uma vez e respeita quem
+# escolher o nano de propósito depois dela.
+MIGRACAO_MODELO = ("gpt-5-nano", DEFAULT_MODEL, "migrado_modelo_2026_07")
 
 # Perfis baixados pela atualização automática. Ficam FORA da instalação porque
 # em `Program Files` o processo não tem escrita; sobrepõem os de `data/profiles`
@@ -96,7 +114,7 @@ def seed():
         jwrite(CONFIG_F, {
             "model": DEFAULT_MODEL,
             "reasoning_effort": DEFAULT_EFFORT,
-            "openai_key": os.environ.get("OPENAI_API_KEY", ""),
+            "openai_key": "",          # preenchido só pela tela de Configurações
             # URL base da atualização automática dos perfis. Vazia = desligada.
             # Aceita tanto o raw de um repositório público quanto um webhook do
             # n8n com o repositório privado atrás — o cliente é o mesmo.
@@ -113,7 +131,20 @@ seed()
 
 def get_users():   return jread(USERS_F, {"users": []})["users"]
 def set_users(u):  jwrite(USERS_F, {"users": u})
-def get_config():  return jread(CONFIG_F, {})
+def get_config():
+    c = jread(CONFIG_F, {})
+    de, para, marca = MIGRACAO_MODELO
+    # `c` vazio significa "não consegui ler" tanto quanto "não existe" — jread engole a
+    # exceção. Gravar por cima nesse estado apaga a configuração de quem tem o arquivo
+    # ilegível por um motivo bobo (um BOM, uma vírgula sobrando). Migração só mexe em
+    # config que foi lida de verdade.
+    if c and not c.get(marca):
+        c[marca] = True
+        if c.get("model") == de:
+            c["model"] = para
+        set_config(c)
+    return c
+
 def set_config(c): jwrite(CONFIG_F, c)
 def get_insurers():return jread(INS_F, {"insurers": []})["insurers"]
 def set_insurers(i):jwrite(INS_F, {"insurers": i})
@@ -208,7 +239,7 @@ def _ai_extract(texto, filename, cfg, key, only_keys=None):
     """Camada 3: IA. Extrai só os campos pedidos (only_keys) para ser rápida/barata."""
     from openai import OpenAI
     client = OpenAI(api_key=key)
-    model = cfg.get("model", "gpt-5-nano")
+    model = cfg.get("model") or DEFAULT_MODEL
     effort = cfg.get("reasoning_effort", DEFAULT_EFFORT)
     kw = dict(
         model=model,
@@ -580,7 +611,7 @@ def extract_pdf(pdf_bytes, filename=""):
     ai_error = None
     if missing_keys:
         cfg = get_config()
-        key = cfg.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")
+        key = cfg.get("openai_key", "")
         if key:
             try:
                 ai = _ai_extract(texto, filename, cfg, key, only_keys=missing_keys)

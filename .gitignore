@@ -1,7 +1,9 @@
 # Credenciais / segredos — NUNCA versionar
+# Nada no código lê .env: a chave da OpenAI só existe no config.json da máquina de
+# quem usa, digitada em Configurações. As linhas abaixo ficam como rede de proteção,
+# para o dia em que alguém criar um .env por hábito.
 .env
 .env.*
-!.env.example
 *.key
 secrets.json
 

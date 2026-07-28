@@ -127,10 +127,28 @@ no trabalho da v0.3. O que já foi corrigido:
       passava sozinho e falhava na suíte, e estava registrado como "causa
       desconhecida".
 
+- [x] **BOM zerava a configuração inteira, em silêncio.** `jread` abria os JSON de
+      dados como `utf-8` puro. Bloco de Notas, PowerShell e quase toda ferramenta do
+      Windows gravam um BOM no começo do arquivo — que virava erro de parsing. Como a
+      falha é engolida por design (`except: return default`), o app voltava a **todos**
+      os padrões sem avisar: bastava alguém abrir o `config.json` no Bloco de Notas e
+      salvar para os dados da corretora sumirem da proposta. Vale para `config.json`,
+      `users.json`, `insurers.json` e `template.json`. Corrigido com `utf-8-sig`, que
+      lê com e sem BOM. Coberto por `tests/test_config.py`.
+- [x] **Migração de configuração não grava mais por cima do que não conseguiu ler.**
+      Config ilegível chega como `{}`, indistinguível de "não existe"; a migração
+      escrevia por cima e apagava o que dava para recuperar. Aconteceu de verdade nesta
+      máquina, com a configuração de desenvolvimento. Agora só migra config lida.
+
 ## Pendências críticas
 
-- [ ] **Trocar a chave da OpenAI.** Ela esteve exposta por path traversal num servidor
-      em execução. Trocar e recriar o `.env`.
+- [x] **A chave da OpenAI saiu do código e do disco.** Não há mais `.env`, nem leitura
+      de variável de ambiente, nem padrão embutido: a única fonte é o campo em
+      *Configurações*, digitado na máquina de quem usa e guardado no `config.json`
+      dela. `.env.example` foi removido do repositório porque não havia mais o que
+      exemplificar. A cota passa a ser sempre da conta do cliente.
+      **Falta você:** a chave antiga esteve exposta e continua válida até ser revogada
+      no painel da OpenAI — apagar do disco não revoga nada.
 - [x] **Histórico do git limpo.** O CPF foi redigido em todos os commits com
       `git filter-repo` e o histórico reescrito foi publicado; um clone novo do remoto
       não tem mais o dado. Uma varredura junto encontrou e removeu um segundo caso da
@@ -149,9 +167,12 @@ no trabalho da v0.3. O que já foi corrigido:
       é listar as ofertas e deixar escolher.
 - [x] **Motor versionado.** `server.py`, `extract_engine.py` e `index.html` entraram no
       repositório.
-- [ ] **Reavaliar o `gpt-5-nano`.** A métrica que sustentou a escolha só comparava
-      campos que o modelo preencheu, escondendo dois terços da distância: cobertura
-      correta real de **44%** contra 69,4% do `gpt-4o-mini`.
+- [x] **Modelo padrão de volta ao `gpt-4o-mini`.** A métrica que sustentou o
+      `gpt-5-nano` só comparava campos que o modelo preencheu — o que premia quem
+      deixa em branco — e escondia dois terços da distância: **44%** de cobertura
+      correta contra **69,4%**. O custo maior por chamada pesa pouco, porque os
+      perfis determinísticos já entregam ~80% e a IA só cobre o resíduo. Config já
+      gravada com o nano é migrada uma vez, respeitando quem escolher o nano depois.
 
 ## Distribuição (v0.4 → V1) — DECIDIDO: app desktop Windows
 
