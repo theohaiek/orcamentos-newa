@@ -765,8 +765,41 @@ class H(BaseHTTPRequestHandler):
         if not un: return None
         return next((u for u in get_users() if u["username"] == un), None)
 
+    def handle_one_request(self):
+        self._corpo_lido = False        # a instância é reaproveitada no keep-alive
+        return BaseHTTPRequestHandler.handle_one_request(self)
+
+    # Um corpo de requisição que ninguém leu não some: a conexão é HTTP/1.1 com
+    # keep-alive, então os bytes continuam no socket. O handler volta ao laço, lê
+    # o começo do PDF como se fosse a requisição seguinte, responde 400 e fecha
+    # com o resto por ler — e fechar um socket com dados não lidos, no Windows,
+    # manda RST. O RST descarta o que ainda estava no buffer do cliente, inclusive
+    # a resposta já enviada. Resultado: quem estava com a sessão expirada e mandou
+    # uma proposta recebia erro de rede em vez do 401 que a tela sabe explicar.
+    # Medido antes da correção: 2 falhas em 12 com 500 bytes, 12 em 12 com 2 MB.
+    LIMITE_DESCARTE = 64 * 1024 * 1024
+
+    def descartar_corpo(self):
+        if getattr(self, "_corpo_lido", False):
+            return
+        self._corpo_lido = True
+        try:
+            n = int(self.headers.get("Content-Length", 0) or 0)
+        except (ValueError, AttributeError):
+            return
+        if n > self.LIMITE_DESCARTE:
+            # cliente fora de qualquer uso real: não vale ler para descartar
+            self.close_connection = True
+            return
+        while n > 0:
+            pedaco = self.rfile.read(min(n, 65536))
+            if not pedaco:
+                break
+            n -= len(pedaco)
+
     def send_json(self, obj, code=200, cookie=None):
         b = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        self.descartar_corpo()
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(b)))
@@ -820,6 +853,7 @@ class H(BaseHTTPRequestHandler):
                                "nome": os.path.basename(destino), "bytes": len(dados)})
 
     def read_body(self):
+        self._corpo_lido = True
         n = int(self.headers.get("Content-Length", 0) or 0)
         return self.rfile.read(n) if n else b""
 

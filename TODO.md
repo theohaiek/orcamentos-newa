@@ -109,6 +109,24 @@ no trabalho da v0.3. O que já foi corrigido:
       arquivo. **O histórico do git ainda contém** — ver pendências abaixo.
 - [x] **Suíte de testes** ([`tests/`](tests/)): cinco testes, nenhum chamando a OpenAI.
 
+## Correções de 2026-07-28
+
+- [x] **Recusa com corpo grande derrubava a conexão em vez de responder.** O
+      servidor respondia 401/400 **sem ler o corpo** da requisição. Como a conexão é
+      HTTP/1.1 com keep-alive, os bytes do PDF ficavam no socket: o handler voltava
+      ao laço, lia o começo do PDF como se fosse a requisição seguinte, respondia
+      400 e fechava com o resto por ler — e fechar socket com dados não lidos, no
+      Windows, manda RST. O RST apaga o que ainda estava no buffer do cliente,
+      inclusive a resposta já enviada. Na prática: **sessão expirada + proposta real
+      = erro de rede, sempre**, em vez do 401 que a tela sabe explicar. Medido: 2
+      falhas em 12 com 500 bytes, **12 em 12 com 2 MB**. Atinge `/api/save-pdf`
+      (gravar a proposta), `/api/extract` (enviar a cotação) e todo POST/PUT/DELETE
+      recusado por sessão ou permissão. Corrigido drenando o corpo antes de qualquer
+      resposta; coberto por `tests/test_export.py`.
+      *Foi este defeito que causava a intermitência do `test_export.py`* — que
+      passava sozinho e falhava na suíte, e estava registrado como "causa
+      desconhecida".
+
 ## Pendências críticas
 
 - [ ] **Trocar a chave da OpenAI.** Ela esteve exposta por path traversal num servidor

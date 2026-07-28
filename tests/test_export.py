@@ -111,6 +111,37 @@ ok(a["path"] != b["path"], "o segundo ganha nome próprio")
 ok(os.path.exists(a["path"]) and os.path.exists(b["path"]), "os dois seguem em disco")
 ok(b["nome"].endswith(").pdf"), f"sufixo numerado: {b['nome']}")
 
+print(">> 6. recusa com PDF grande chega como resposta, não como queda de conexão")
+# O servidor respondia 401/400 SEM ler o corpo. A conexão é HTTP/1.1 com
+# keep-alive, então os bytes do PDF ficavam no socket; o handler voltava ao laço,
+# lia o PDF como se fosse a requisição seguinte, respondia 400 e fechava com
+# dados ainda por ler. No Windows fechar assim manda RST, e o RST descarta a
+# resposta que o cliente ainda não tinha lido -> WinError 10053.
+# Com 500 bytes falhava 2 vezes em 12 (era a intermitência desta suíte); com 2 MB,
+# 12 em 12 — ou seja, sessão expirada + proposta real = erro de rede sempre, em
+# vez do 401 que a tela sabe explicar.
+grande = pdf_de_verdade() + b"\n% " + b"x" * 3_000_000
+
+def status(rota, dados, cabecalhos, timeout=30):
+    try:
+        req = urllib.request.Request(U + rota, dados, cabecalhos)
+        with urllib.request.urlopen(req, timeout=timeout) as x:
+            x.read(); return x.status
+    except urllib.error.HTTPError as e:
+        e.read(); return e.code
+    except Exception as e:
+        return type(e).__name__
+
+r = [status("/api/save-pdf", grande,
+            {"Content-Type": "application/pdf", "X-Nome-Arquivo": "grande.pdf"})
+     for _ in range(5)]
+ok(all(x == 401 for x in r), f"sem sessão, 5 envios de 3 MB: todos 401 -> {r}")
+
+r = [status("/api/extract", grande,
+            {"Content-Type": "multipart/form-data", "Cookie": CK})  # sem boundary
+     for _ in range(3)]
+ok(all(x == 400 for x in r), f"upload malformado de 3 MB: todos 400 -> {r}")
+
 for p in criados:
     try: os.remove(p)
     except Exception: pass
