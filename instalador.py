@@ -37,8 +37,8 @@ RELEASE = "https://github.com/theohaiek/orcamentos-newa/releases/latest/download
 
 # Arquivos e pastas do repositório que o programa precisa em disco para rodar e
 # para se manter atualizado. O resto (testes, documentação, build) não vai junto.
-DO_REPO = ["app.py", "server.py", "extract_engine.py", "updater.py", "index.html",
-           "data", "orcamentos-newa"]
+DO_REPO = ["app.py", "server.py", "extract_engine.py", "updater.py", "auth.py",
+           "index.html", "data", "orcamentos-newa"]
 
 
 def diga(msg=""):

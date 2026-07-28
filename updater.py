@@ -187,8 +187,8 @@ MAX_ZIP = 40 * 1024 * 1024
 # O que a sincronização mantém em dia. Testes, documentação e scripts de build não
 # vão para a máquina do usuário; e nada fora desta lista é escrito, então um
 # repositório adulterado não consegue plantar arquivo em lugar nenhum.
-SINCRONIZAR = ("app.py", "server.py", "extract_engine.py", "updater.py", "index.html",
-               "data/", "orcamentos-newa/")
+SINCRONIZAR = ("app.py", "server.py", "extract_engine.py", "updater.py", "auth.py",
+               "index.html", "data/", "orcamentos-newa/")
 
 
 def _permitido(rel):

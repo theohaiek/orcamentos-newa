@@ -233,9 +233,18 @@
         const fd = new FormData(form);
         const r = await api("/login", { method: "POST", body: { username: fd.get("username"), password: fd.get("password") } });
         S.me = r.user; await loadShared(); renderApp();
+        // Entrou pelo último acesso confirmado, sem falar com o servidor. Precisa
+        // aparecer: o que está valendo aqui tem prazo.
+        if (r.aviso) toast(r.aviso, "warn");
       } catch (err) {
         btn.disabled = false; btn.textContent = "Entrar";
-        renderLogin(err.status === 401 ? "Usuário ou senha incorretos." : (err.message || "Falha ao entrar."));
+        // "Usuário ou senha incorretos" seria mentira quando o problema é que o
+        // servidor de acesso não respondeu — e mandaria a pessoa procurar no lugar
+        // errado. Quando o servidor explica o motivo, é o motivo dele que aparece.
+        const doServidor = err.status === 401 && err.data && err.data.origem && err.data.error;
+        renderLogin(doServidor ? err.data.error
+          : (err.status === 401 ? "Usuário ou senha incorretos."
+                                : (err.message || "Falha ao entrar.")));
       }
     };
     form.querySelector("[name=username]").focus();
@@ -1367,7 +1376,13 @@
     root().innerHTML = shell("Administração", "Usuários",
       '<button class="btn" id="adduser">' + I.plus + " Novo usuário</button>");
     const c = $("#view-content");
-    c.innerHTML = '<div class="card" style="overflow:hidden"><table class="table"><thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th></th></tr></thead><tbody id="utb"><tr><td colspan="4"><div class="sk" style="height:20px;width:60%"></div></td></tr></tbody></table></div>';
+    // Com o controle de acesso no servidor, esta lista deixa de decidir quem entra.
+    // Sem dizer isso, alguém cria um usuário aqui, ele não funciona, e a conclusão
+    // natural é que o app está quebrado.
+    c.innerHTML = ((S.config || {}).auth_remoto
+        ? '<div class="alert info" style="margin-bottom:16px">Quem entra no aplicativo é decidido pelo <b>servidor de acesso</b>, configurado em Configurações. Esta lista não vale mais para o login — criar ou remover alguém aqui não muda quem consegue entrar.</div>'
+        : "") +
+      '<div class="card" style="overflow:hidden"><table class="table"><thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th></th></tr></thead><tbody id="utb"><tr><td colspan="4"><div class="sk" style="height:20px;width:60%"></div></td></tr></tbody></table></div>';
     $("#adduser").onclick = () => editUser(null);
     await refreshUsers();
   }
@@ -1641,11 +1656,34 @@
       field("ctel", "Telefone", co.telefone || "(11) 4040-3665") +
       field("cwpp", "WhatsApp", co.whatsapp || "") +
       field("cend", "Endereço", co.endereco || "") +
-      '<button class="btn" id="savecor" style="margin-top:16px">Salvar dados da corretora</button></div></div>';
+      '<button class="btn" id="savecor" style="margin-top:16px">Salvar dados da corretora</button></div>' +
+      '<div class="card pad"><h3 style="margin-bottom:14px">Controle de acesso</h3>' +
+      '<div class="field"><label>Endereço de validação de login (n8n)</label>' +
+      '<input class="input" id="cauth" placeholder="https://…/webhook/…" value="' + esc(cfg.auth_url || "") + '"></div>' +
+      '<div class="hint">' +
+      (cfg.auth_remoto
+        ? "Ligado: quem entra é decidido pelo servidor. A senha local não vale mais, e cortar alguém lá corta aqui."
+        : "<b>Desligado.</b> O login é validado nesta máquina pelo arquivo de usuários — incluindo a senha padrão. Preencha o endereço para o servidor passar a decidir.") +
+      '</div>' +
+      '<button class="btn" id="saveauth" style="margin-top:16px">Salvar controle de acesso</button></div></div>';
     $("#savecfg").onclick = async () => {
       const body = { model: $("#cmodel").value.trim(), reasoning_effort: $("#ceffort").value };
       const k = $("#cok").value.trim(); if (k) body.openai_key = k;
       await api("/config", { method: "POST", body }); toast("Integração salva.", "ok"); $("#cok").value = ""; await loadShared();
+    };
+    $("#saveauth").onclick = async () => {
+      const auth_url = $("#cauth").value.trim();
+      try {
+        await api("/config", { method: "POST", body: { auth_url } });
+      } catch (e) {
+        toast(e.message || "Não consegui salvar o endereço.", "err"); return;
+      }
+      // Vale avisar: a partir daqui o login depende do servidor, e quem estiver
+      // testando precisa saber disso ANTES de sair da conta e não conseguir voltar.
+      toast(auth_url
+        ? "Salvo. O próximo login será validado no servidor."
+        : "Salvo. O login voltou a ser validado nesta máquina.", "ok");
+      await loadShared();
     };
     $("#savecor").onclick = async () => {
       const corretora = { nome: $("#cnome").value.trim(), email: $("#cemail").value.trim(), site: $("#csite").value.trim(), telefone: $("#ctel").value.trim(), whatsapp: $("#cwpp").value.trim(), endereco: $("#cend").value.trim() };

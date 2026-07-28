@@ -216,19 +216,21 @@ chave da OpenAI e o corte de acesso a quem usa o build oficial — não os perfi
       no próximo login, sem reinstalar.
 - [x] **Build enxuto**: 942 MB → 82 MB. O PyInstaller arrastava o que estivesse
       instalado no Python da máquina (torch, llvmlite, ffmpeg, scipy, onnxruntime).
-- [ ] **Backend n8n — um webhook só: `POST /auth`.** Recebe usuário e senha, valida
-      contra o banco (hash guardado lá, nunca a senha), devolve token de sessão com
-      validade. Sem whitelist e **sem senha local**: isso elimina o furo em que a senha
-      padrão `123` na máquina deixava entrar quem descobrisse um username. HTTPS é
-      obrigatório, porque a senha trafega. O token com validade permite trabalhar
-      offline até expirar, o que suaviza a dependência do servidor.
-- [ ] App consumindo o `/auth`; falha fechado quando não confirma o acesso. O
-      `users.json` local e o `hash_pw`/`check_pw` deixam de ser fonte de verdade no
-      build desktop — um só lugar decide quem entra.
-- [ ] **A chave da OpenAI é do cliente**, digitada uma vez em *Configurações* (o campo
-      já existe e guarda em `.devdata/config.json`, fora do repositório; o servidor só
-      devolve `has_openai_key`). Sem proxy `/ia`: o texto do PDF vai direto do app para
-      a OpenAI, então o n8n **não** entra na cadeia de dado pessoal, e a cota é do
+- [x] **Cliente do `POST /auth`** ([`auth.py`](auth.py)): com `auth_url` configurada,
+      quem decide quem entra é o servidor, e o `users.json` local **não é consultado
+      nem como segunda chance** — é o que fecha o furo da senha padrão `123`. Só
+      libera com 200 + JSON + `ok: true`: HTML de proxy, corpo vazio e 4xx negam.
+      5xx e falha de rede são tratados como indisponibilidade, não como negativa, e
+      aí vale o crachá offline: usuário, papel, prazo e um **hash** da senha gravados
+      no último acesso confirmado. Servidor negando apaga o crachá, então quem foi
+      desligado não segue entrando por inércia. HTTPS obrigatório (a senha trafega).
+      31 asserções em [`tests/test_auth.py`](tests/), sem rede real.
+      **Falta você:** montar o fluxo no n8n — o contrato está no cabeçalho do
+      `auth.py`. Enquanto `auth_url` estiver vazia, o login segue local, que é o modo
+      de desenvolvimento. Ligar é colar a URL em *Configurações → Controle de acesso*.
+- [x] **A chave da OpenAI é do cliente**, digitada em *Configurações* e guardada no
+      `config.json` da máquina dela. Sem proxy `/ia`: o texto do PDF vai direto do app
+      para a OpenAI, então o n8n **não** entra na cadeia de dado pessoal, e a cota é do
       cliente, na conta dele.
 - [ ] Publicação: rotina que gera `versao.json` com os hashes dos perfis e sobe o
       instalador, para o updater não depender de passo manual.

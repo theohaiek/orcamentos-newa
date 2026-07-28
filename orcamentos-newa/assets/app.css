@@ -199,6 +199,9 @@ textarea.input { padding: 12px 14px; min-height: 84px; line-height: 1.5; resize:
   display: flex; gap: 10px; align-items: center; max-width: 360px; animation: toast-in .28s cubic-bezier(.2,0,0,1); }
 .toast.err { background: #7E1D1D; }
 .toast.ok { background: #14672F; }
+/* nem erro nem sucesso: "funcionou, mas você precisa saber de uma coisa" — é o
+   caso do login aceito offline, que vale só até o prazo do último acesso */
+.toast.warn { background: #7A5200; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 /* ---------- Dropzone ---------- */

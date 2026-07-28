@@ -20,6 +20,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, unquote, parse_qs
 
 import updater
+import auth
 
 PORT = 8080
 REPO = os.path.dirname(os.path.abspath(__file__))   # o motor mora no repositório
@@ -95,17 +96,11 @@ CONFIG_F = os.path.join(DEV, "config.json")
 INS_F = os.path.join(DEV, "insurers.json")
 TPL_F = os.path.join(DEV, "template.json")
 
-def hash_pw(pw, salt=None):
-    salt = salt or secrets.token_hex(8)
-    h = hashlib.pbkdf2_hmac("sha256", pw.encode(), salt.encode(), 120000).hex()
-    return f"{salt}${h}"
+from auth import hash_pw, check_pw          # mesmo esquema aqui e no crachá offline
 
-def check_pw(pw, stored):
-    try:
-        salt, h = stored.split("$", 1)
-        return hmac.compare_digest(hashlib.pbkdf2_hmac("sha256", pw.encode(), salt.encode(), 120000).hex(), h)
-    except Exception:
-        return False
+# Crachá do último acesso confirmado pelo servidor. Fica com os dados do usuário, não
+# no repositório: é específico da máquina.
+AUTH_CACHE = os.path.join(DEV, "auth_cache.json")
 
 def seed():
     if not os.path.exists(USERS_F):
@@ -115,6 +110,11 @@ def seed():
             "model": DEFAULT_MODEL,
             "reasoning_effort": DEFAULT_EFFORT,
             "openai_key": "",          # preenchido só pela tela de Configurações
+            # Webhook do n8n que valida usuário e senha. Vazia = login local pelo
+            # users.json, que é o modo de desenvolvimento — e o único em que a senha
+            # padrão `123` ainda abre alguma porta. Preenchida, o servidor passa a ser
+            # a única autoridade e o users.json deixa de valer para entrar.
+            "auth_url": "",
             # URL base da atualização automática dos perfis. Vazia = desligada.
             # Aceita tanto o raw de um repositório público quanto um webhook do
             # n8n com o repositório privado atrás — o cliente é o mesmo.
@@ -152,9 +152,12 @@ def get_template(): return jread(TPL_F, {})
 def set_template(t): jwrite(TPL_F, t)
 
 # =============================== sessões ===============================
-SESS = {}  # token -> username
-def new_session(username):
-    t = secrets.token_hex(24); SESS[t] = username; return t
+# A sessão guarda a PESSOA, não só o nome de usuário. Quando quem valida o acesso é
+# o n8n, o usuário não existe no `users.json` desta máquina — procurá-lo lá deixaria
+# toda requisição depois do login sem dono, e o app inteiro respondendo 401.
+SESS = {}  # token -> {"username", "name", "role"}
+def new_session(pessoa):
+    t = secrets.token_hex(24); SESS[t] = dict(pessoa); return t
 
 # =============================== extração IA ===============================
 CAMPOS = {
@@ -792,9 +795,7 @@ class H(BaseHTTPRequestHandler):
         c = self.headers.get("Cookie", "")
         m = re.search(r"orca_sess=([a-f0-9]+)", c)
         if not m: return None
-        un = SESS.get(m.group(1))
-        if not un: return None
-        return next((u for u in get_users() if u["username"] == un), None)
+        return SESS.get(m.group(1))
 
     def handle_one_request(self):
         self._corpo_lido = False        # a instância é reaproveitada no keep-alive
@@ -980,7 +981,14 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/config":
             if not self.user(): return self.send_json({"error": "unauth"}, 401)
             c = get_config()
-            return self.send_json({"model": c.get("model", DEFAULT_MODEL), "reasoning_effort": c.get("reasoning_effort", DEFAULT_EFFORT), "has_openai_key": bool(c.get("openai_key")), "corretora": c.get("corretora", {})})
+            return self.send_json({"model": c.get("model", DEFAULT_MODEL),
+                                   "reasoning_effort": c.get("reasoning_effort", DEFAULT_EFFORT),
+                                   "has_openai_key": bool(c.get("openai_key")),
+                                   "auth_url": c.get("auth_url", ""),
+                                   # com o servidor de acesso ligado, a tela de Usuários
+                                   # deixa de decidir quem entra — quem decide é o n8n
+                                   "auth_remoto": bool((c.get("auth_url") or "").strip()),
+                                   "corretora": c.get("corretora", {})})
         if p == "/api/insurers":
             if not self.user(): return self.send_json({"error": "unauth"}, 401)
             return self.send_json({"insurers": get_insurers()})
@@ -1002,14 +1010,31 @@ class H(BaseHTTPRequestHandler):
         p = urlparse(self.path).path
         if p == "/api/login":
             d = self.read_json()
-            u = next((x for x in get_users() if x["username"].lower() == str(d.get("username", "")).lower()), None)
-            if not u or not check_pw(str(d.get("password", "")), u["pw"]):
-                return self.send_json({"error": "invalid"}, 401)
-            tok = new_session(u["username"])
+            usuario, senha = str(d.get("username", "")), str(d.get("password", ""))
+            cfg = get_config()
+            url = (cfg.get("auth_url") or "").strip()
+            aviso = ""
+            if url:
+                # Com o servidor de acesso configurado, ele é a ÚNICA autoridade: o
+                # users.json local não é consultado nem como segunda chance. Era esse
+                # o buraco — a senha padrão `123` numa máquina deixava entrar quem
+                # descobrisse um nome de usuário.
+                r = auth.autenticar(url, usuario, senha, AUTH_CACHE, updater.VERSION)
+                if not r["ok"]:
+                    return self.send_json({"error": r["mensagem"], "origem": r["origem"]}, 401)
+                pessoa, aviso = r["user"], r["mensagem"]
+            else:
+                u = next((x for x in get_users()
+                          if x["username"].lower() == usuario.lower()), None)
+                if not u or not check_pw(senha, u["pw"]):
+                    return self.send_json({"error": "invalid"}, 401)
+                pessoa = pub(u)
+            tok = new_session(pessoa)
             # Todo login verifica atualização. É o que dá à usuária um jeito de forçar
             # a busca sem saber que ela existe: sair e entrar de novo resolve.
             threading.Thread(target=checar_atualizacao, daemon=True).start()
-            return self.send_json({"user": pub(u)}, cookie=f"orca_sess={tok}; Path=/; HttpOnly; SameSite=Lax")
+            return self.send_json({"user": pessoa, "aviso": aviso},
+                                  cookie=f"orca_sess={tok}; Path=/; HttpOnly; SameSite=Lax")
         if p == "/api/logout":
             return self.send_json({"ok": True}, cookie="orca_sess=; Path=/; Max-Age=0")
         if p == "/api/save-pdf":
@@ -1035,6 +1060,14 @@ class H(BaseHTTPRequestHandler):
             if "model" in d: c["model"] = d["model"]
             if "reasoning_effort" in d: c["reasoning_effort"] = d["reasoning_effort"]
             if d.get("openai_key"): c["openai_key"] = d["openai_key"]
+            if "auth_url" in d:
+                u = str(d["auth_url"] or "").strip()
+                # Endereço que não serve só faria o login parar de funcionar sem
+                # ninguém entender por quê. Recusa aqui, com o motivo.
+                if u and not auth._url_aceitavel(u):
+                    return self.send_json(
+                        {"error": "o endereço de validação de acesso precisa começar com https://"}, 400)
+                c["auth_url"] = u
             if "corretora" in d: c["corretora"] = d["corretora"]
             set_config(c); return self.send_json({"ok": True})
         if p == "/api/insurers":
