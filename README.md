@@ -47,6 +47,24 @@ já tem em disco.
 └─ …         seus usuários, configuração e propostas
 ```
 
+Se uma sincronização deixar a pasta `repo` num estado que não roda, o programa **não
+deixa de abrir**: percebe a falha, tenta sincronizar de novo e, se ainda assim não
+subir, usa a cópia que veio no instalador. Publicar código quebrado atrasa a correção;
+não deve trancar ninguém para fora do próprio trabalho.
+
+### Quem entra no programa
+
+Por padrão o login é conferido na própria máquina, pelo arquivo de usuários — é o modo
+de desenvolvimento. Preenchendo o **endereço de validação** em *Configurações →
+Controle de acesso*, quem decide passa a ser o servidor (um webhook), e o arquivo local
+deixa de valer: criar usuário na tela de *Usuários* não abre mais porta nenhuma.
+
+Só libera com `200` + JSON + `ok: true`; qualquer outra coisa nega. Falha de rede e erro
+5xx são tratados como indisponibilidade, não como negativa — aí vale o **último acesso
+confirmado**, que tem prazo definido pelo servidor e exige a mesma senha. Cortar alguém
+no servidor tira o acesso em, no máximo, esse prazo. O contrato completo está no
+cabeçalho de [`auth.py`](auth.py).
+
 ---
 
 Para desenvolvimento e edição ao vivo do visual, veja
