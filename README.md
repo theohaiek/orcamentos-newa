@@ -70,18 +70,10 @@ cabeçalho de [`auth.py`](auth.py).
 Para desenvolvimento e edição ao vivo do visual, veja
 [Desenvolvimento local](#desenvolvimento-local-edição-ao-vivo).
 
-> **Sobre a distribuição (2026-07-26):** uma medição anterior concluiu que o motor não
-> poderia ser portado para PHP e descartou o WordPress. **Aquela medição estava errada**
-> — o defeito era do script de teste, não da biblioteca. Refeita: o motor roda em PHP
-> com **93% da cobertura** que tem em Python, com os perfis intocados. Números e o custo
-> real do port em [`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md). O caminho
-> escolhido foi o **app desktop**:
-> [`docs/superpowers/specs/2026-07-25-app-desktop-design.md`](docs/superpowers/specs/2026-07-25-app-desktop-design.md).
-
-> **Status:** v0.3 — funcional ponta a ponta em desenvolvimento local (servidor Python
-> de live-edit). **80% dos campos** saem da extração determinística (auditável, sem IA)
-> nas 15 seguradoras de amostra. O empacotamento como app desktop está no
-> [`TODO.md`](TODO.md).
+> **Status: v0.4** — app desktop empacotado, instalável e se atualizando sozinho.
+> **80% dos campos** saem da extração determinística (auditável, sem IA) nas 15
+> seguradoras de amostra. O que falta para a V1 e o que ainda **não** é verdade estão
+> em [`TODO.md`](TODO.md) e em [Distribuição](#distribuição--decidido-app-desktop-windows).
 
 ---
 
@@ -109,9 +101,14 @@ Para desenvolvimento e edição ao vivo do visual, veja
   destacados; erros de extração aparecem com o motivo.
 - **Editor de modelo:** edite o layout do documento gerado (seções, campos, textos,
   ordem) com pré-visualização em placeholders.
-- **Exportação em PDF** (capa + comparativo) com um clique.
-- **Login** com usuários próprios; administradores gerenciam contas em **Usuários**.
-  Primeira conta: `Madu` / `123`.
+- **Exportação em PDF** (capa + comparativo) com um clique, salva em
+  `Documentos\Propostas NEWA` — **pelo servidor, não pelo download do navegador**, e
+  nunca sobrescrevendo uma proposta anterior. A tela só anuncia sucesso depois que o
+  arquivo existe em disco com o tamanho certo: numa corretora, achar que mandou a
+  proposta e não ter mandado é o pior modo de falha possível.
+- **Login** conferido na própria máquina por padrão (primeira conta: `Madu` / `123`),
+  ou **validado num servidor** quando o endereço é preenchido em *Configurações* — aí
+  o arquivo local de usuários deixa de valer e o acesso se corta de um lugar só.
 - **Modelos de Entrada:** registro das seguradoras (nome, cor, logos, palavras-chave).
 - Estética **NEWA**: verde-floresta + acento gradiente.
 
@@ -121,8 +118,23 @@ Para desenvolvimento e edição ao vivo do visual, veja
 
 ```
 app-orçamentos-newa/
+├── Instalar Orcamentos NEWA.exe  # o que a pessoa baixa (vive aqui para ficar em dia)
+│
+│   ── o programa ─────────────────────────────────────────────────────────────
+├── app.py                      # casca desktop: janela nativa, porta livre, DPI
+├── server.py                   # servidor e API (http.server, sem framework)
+├── extract_engine.py           # motor de extração por âncora
+├── auth.py                     # quem entra: validação no n8n + crachá offline
+├── updater.py                  # atualização de perfis e do programa inteiro
+├── index.html                  # casca da SPA
+│
+│   ── empacotamento ──────────────────────────────────────────────────────────
+├── build.py                    # gera o executável e o instalador (PyInstaller)
+├── instalador.py               # instala, cria atalhos, resolve o WebView2
+│
 ├── data/
 │   ├── insurers.json           # registro de seguradoras (cores, logos, keywords)
+│   ├── sincronizar.json        # que arquivos formam o programa na máquina do usuário
 │   └── profiles/               # perfis de extração determinística por layout
 │       ├── aliro.json  allianz.json  azul.json  bradesco.json  darwin.json
 │       ├── hdi.json    itau.json     justos.json  mapfre.json  mitsui.json
@@ -132,22 +144,37 @@ app-orçamentos-newa/
 │       └── _generic.json       # dicionário de rótulos (roda em qualquer layout)
 ├── docs/
 │   ├── spec.md                 # especificação, arquitetura e decisões
-│   └── avaliacao-mineru.md     # MinerU x PyMuPDF: medição e decisão
-├── orcamentos-newa/            # === o plugin WordPress (pasta que vira o .zip) ===
+│   ├── perfis.md               # como autorar o perfil de uma seguradora nova
+│   ├── avaliacao-mineru.md     # MinerU x PyMuPDF: medição e decisão
+│   └── avaliacao-smalot.md     # o port PHP que foi medido e descartado
+├── orcamentos-newa/            # a interface (assets servidos ao navegador)
 │   └── assets/
 │       ├── app.css             # design system da UI
 │       ├── proposal.css        # layout do documento exportável
 │       ├── app.js              # SPA (login, upload, extração, conferência, export, admin)
 │       ├── logo-newa.png, logos/  # logo NEWA + logos das seguradoras
 │       └── vendor/             # jsPDF + html2canvas (self-contained)
+├── tests/                      # 11 arquivos; nenhum chama a OpenAI nem usa rede
 ├── README.md
 └── TODO.md
 ```
+
+`data/sincronizar.json` é a lista do que vai para a máquina de quem usa. Ela existe
+como **dado, não como constante no código**: o atualizador lê essa lista de dentro do
+pacote que acabou de baixar, então uma versão que acrescenta um arquivo consegue
+descrevê-lo mesmo rodando sob um atualizador antigo. Sem isso, um arquivo novo
+referenciado por outro chega pela metade — e foi exatamente o que quebrou uma
+instalação em 28/07.
 
 > **A chave da OpenAI não mora em lugar nenhum deste repositório**, e nem na máquina de
 > quem desenvolve: não há `.env`, não há variável de ambiente, não há padrão embutido.
 > Ela é digitada em *Configurações* na máquina de quem usa e fica em `config.json`, fora
 > do repositório. A cota é da conta do cliente, e não há chave a vazar daqui.
+>
+> Não é zelo abstrato: a chave anterior **vazou**, servida por `/assets/../../../.env`
+> numa época em que essa rota respondia antes do login. O buraco do caminho foi fechado
+> e tem teste, mas enquanto houvesse chave em disco fora do controle de quem usa, um
+> erro parecido exporia a chave de outra pessoa.
 
 ---
 
@@ -163,9 +190,9 @@ Pré-requisito: **Python 3.8+** com `pymupdf` e `openai` (`pip install pymupdf o
 
 2. Abre sozinho em `http://localhost:8080/` — entre com **Madu / 123**.
 
-3. A chave da OpenAI, se quiser exercitar a camada de IA, vai em *Configurações*.
-   Não existe `.env` nem variável de ambiente: **a única fonte da chave é esse campo**,
-   e ela fica em `config.json`, fora do repositório. É deliberado — ver abaixo.
+3. A chave da OpenAI, se quiser exercitar a camada de IA, vai em *Configurações* — é a
+   única fonte, aqui como na máquina de quem usa. Sem ela, o determinístico roda normal
+   e entrega os ~80%; só o *fallback* de IA fica desligado.
 
 Edite os arquivos em `orcamentos-newa/assets/` e recarregue a página (F5) — o servidor
 injeta *cache-busting*, então um F5 normal já pega a versão nova.
@@ -239,32 +266,65 @@ caminho é **autorar o perfil dela**, descrito em [`docs/perfis.md`](docs/perfis
 python tests/run_all.py
 ```
 
-Cinco testes, nenhum deles chama a OpenAI: contenção de caminho nas rotas públicas,
-não-regressão da cobertura determinística, detecção de multi-oferta, rejeição de valor
-inventado pela IA e os avisos da pipeline de validação.
+**11 arquivos de teste. Nenhum chama a OpenAI e nenhum usa rede real** — os serviços
+externos são substituídos por servidores locais de mentira, então a suíte roda de graça,
+offline e em segundos.
+
+| teste | o que protege |
+|---|---|
+| `test_traversal.py` | contenção de caminho nas rotas servidas antes do login |
+| `test_cobertura.py` | não-regressão da cobertura determinística (piso: 24/31) |
+| `test_multioferta.py` | detecção de cotação com vários planos lado a lado |
+| `test_verificacao_ia.py` | rejeição de valor inventado pela IA (injeção: 0 de 89 passa) |
+| `test_validacao_pdf.py` | avisos da pipeline: página sem texto, falha da IA, drift |
+| `test_config.py` | configuração sobrevive a BOM; migração não apaga o que não leu |
+| `test_auth.py` | login no servidor, falha fechado, crachá offline com prazo |
+| `test_updater.py` | atualização de perfis: hash, travessia, cache, versão |
+| `test_sincronizacao.py` | atualização do programa; recuo quando o repo quebra |
+| `test_export.py` | gravação do PDF, e recusa que chega como resposta e não como queda |
+| `test_pendencias.js` | assistente de conferência e montagem do PDF (roda no Node) |
+
+Sem o Node instalado, o teste de interface é marcado **PULADO** de forma visível — para
+ninguém ler a suíte verde como cobertura completa.
 
 PDFs escaneados (sem camada de texto) ainda não são suportados — o MinerU foi avaliado e
 é a recomendação para esse caso: ver [`docs/avaliacao-mineru.md`](docs/avaliacao-mineru.md).
 
 ---
 
-## Distribuição — decisão em aberto
+## Distribuição — decidido: app desktop Windows
 
-Duas vias, ambas medidas e viáveis:
+O WordPress ficou de fora. O motor continua em Python sem reescrita, o app é um
+executável Windows com janela própria, e o servidor externo (n8n) entra **só para
+validar acesso** — nunca para processar PDF.
 
-**Plugin WordPress.** O motor porta para PHP (`smalot/pdfparser`, sem binário externo,
-roda em hospedagem compartilhada) entregando **23,3 de 31 campos** contra 25,1 do
-PyMuPDF — 93%. Custo: 3 valores divergentes em 350 que precisam de correção nos perfis
-antes de produção, e duas implementações do mesmo motor para manter. Medição em
-[`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md).
-
-**App desktop (Windows/macOS).** Mantém o motor em Python sem reescrita nenhuma; janela
-nativa, extração inteira na máquina. Exige um backend mínimo (whitelist, ponte para a
-OpenAI, versão vigente) e um instalador por sistema. Desenho em
+A via descartada foi medida antes de descartar: o motor **porta** para PHP
+(`smalot/pdfparser`, sem binário externo, roda em hospedagem compartilhada) entregando
+23,3 de 31 campos contra 25,1 do PyMuPDF — 93%. O que pesou contra não foi a cobertura,
+foram **duas implementações do mesmo motor para manter em paridade**. Números em
+[`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md); desenho do desktop em
 [`docs/superpowers/specs/2026-07-25-app-desktop-design.md`](docs/superpowers/specs/2026-07-25-app-desktop-design.md).
 
-Em ambas, perfis novos de seguradora chegam sem reinstalar.
+**macOS está fora do escopo** até haver um Mac para testar — há três incógnitas reais
+(exportação do PDF, persistência do cookie em `127.0.0.1` no WKWebView, e a tabela do
+comparativo, que usa `var()` dentro de `repeat()` no grid), e prometer sem testar seria
+inventar. Windows 32 bits também não roda: o build é x64.
 
-> **Atenção ao que trafega.** Hoje a camada de IA envia o **texto integral** do PDF à
-> OpenAI — inclusive nome, CPF e CEP do segurado. Qualquer das duas vias herda isso
-> enquanto não houver redação dos dados pessoais antes do envio (ver `TODO.md`).
+### O que ainda não é verdade
+
+Vale ler antes de distribuir para alguém:
+
+- **O texto integral do PDF vai para a OpenAI** — nome, CPF, CEP, placa, chassi —
+  quando a camada de IA é acionada. A spec do app desktop afirma o contrário. Ou o
+  código muda, ou a spec está mentindo; está em decisão (ver [`TODO.md`](TODO.md)).
+  Sem chave configurada, a camada de IA não roda e nada sai da máquina.
+- **A senha padrão ainda vale.** A validação no servidor está implementada e testada,
+  mas publicada desligada, porque o fluxo do lado do n8n ainda não existe. Até ligar,
+  quem tem o app instalado entra com `Madu`/`123`.
+- **O instalador nunca rodou em outra máquina.** Em particular, o trecho que instala o
+  WebView2 sozinho nunca foi exercitado: a máquina de desenvolvimento já tem o
+  componente. É código escrito e não testado.
+- **Não há assinatura de código**, por decisão: a Microsoft declara que o certificado EV
+  não evita mais o SmartScreen e a reputação zera a cada versão. O aviso da primeira
+  execução é aceito conscientemente — mas num Windows 11 com *Smart App Control* ligado
+  o binário pode ser **bloqueado**, não só avisado.

@@ -105,7 +105,8 @@ no trabalho da v0.3. O que já foi corrigido:
       derrubava o documento inteiro para a IA. `match_profile` compara sem espaços.
 - [x] **CPF real de terceiro versionado** em `docs/avaliacao-mineru.md`. Removido do
       arquivo. **O histórico do git ainda contém** — ver pendências abaixo.
-- [x] **Suíte de testes** ([`tests/`](tests/)): cinco testes, nenhum chamando a OpenAI.
+- [x] **Suíte de testes** ([`tests/`](tests/)): começou com cinco; hoje são **11
+      arquivos**, nenhum chamando a OpenAI e nenhum usando rede real.
 
 ## Correções de 2026-07-28
 
@@ -229,7 +230,12 @@ concluir: pode ser que em algum deles a informação exista com outro nome.
       próprio garbage collect; para garantia, abrir chamado no suporte.
 - [ ] **Redigir dados pessoais antes de enviar à OpenAI.** Hoje vai o **texto integral**
       do PDF: nome, CPF, CEP, placa, chassi. A spec do app desktop afirma o contrário
-      ("nenhum PDF sai da máquina") e precisa ser corrigida ou o código, ajustado.
+      ("nenhum PDF sai da máquina") — ou o código muda, ou a spec está mentindo.
+      *Aguardando decisão do Theo (perguntado em 28/07).* O argumento mais forte não é
+      LGPD, é que **nenhum desses campos é usado pela extração**: os 31 campos são
+      coberturas, franquias, prêmios e parcelamento. Estamos pagando token para enviar
+      dado pessoal que o motor descarta — então mascarar não deve custar cobertura, e
+      dá para medir antes e depois em vez de afirmar.
 - ~~Corrigir os 3 valores divergentes da via PHP~~ (`yelum/a_vista`,
   `aliro/parc_10x`, `yelum/veiculo`). **Sem efeito desde que o WordPress saiu do
   escopo** — não existe port PHP em produção nem previsto. Fica registrado porque
@@ -249,28 +255,35 @@ concluir: pode ser que em algum deles a informação exista com outro nome.
 ## Distribuição (v0.4 → V1) — DECIDIDO: app desktop Windows
 
 O WordPress fica de fora. O motor continua em Python, o app vira executável
-Windows com janela própria, e o n8n entra **só** para guardar a chave da OpenAI e
-validar acesso — nunca para processar PDF. Servidor n8n já disponível, com uptime
-saudável. Avaliação que sustenta a escolha:
-[`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md) e
+Windows com janela própria, e o n8n entra **só para validar acesso** — nunca para
+processar PDF. Servidor n8n já disponível, com uptime saudável. Avaliação que sustenta
+a escolha: [`docs/avaliacao-smalot.md`](docs/avaliacao-smalot.md) e
 [`docs/superpowers/specs/2026-07-25-app-desktop-design.md`](docs/superpowers/specs/2026-07-25-app-desktop-design.md).
 
-Nota sobre o repositório público: cogitou-se abrir o repo para o auto-update puxar
-direto do `raw.githubusercontent`. Não é preciso — o n8n serve o mesmo manifesto com o
-repositório privado atrás, e o cliente de atualização é o mesmo (só muda a URL). Vale
-lembrar que abrir o repo **não** seria "carro sem chave": Python empacotado é
-desempacotável e a verificação de acesso, removível. O que o n8n protege de fato é a
-chave da OpenAI e o corte de acesso a quem usa o build oficial — não os perfis.
+**O n8n não guarda a chave da OpenAI** — chegou-se a cogitar isso, e foi descartado em
+28/07. A chave é do cliente, digitada em *Configurações* na máquina dele; o Theo a
+instala à mão, em call. Assim o n8n fica fora da cadeia de dado pessoal e a cota é da
+conta de quem usa.
 
-- [x] **Atualização automática dos perfis** ([`updater.py`](updater.py)): manifesto
-      `versao.json` com sha256 por perfil; baixa só o que mudou, confere o hash, recusa
-      o que não for perfil válido, grava de forma atômica em pasta gravável do usuário
-      (a instalação em `Program Files` não é gravável) e o perfil baixado se sobrepõe ao
-      instalado por nome. Nome de arquivo é validado contra `[a-z0-9_-]+\.json`, então
-      manifesto adulterado não escreve fora da pasta. Sem rede, a verificação falha em
-      silêncio e o app trabalha com o que tem. Versão nova do app é **anunciada**, nunca
-      aplicada sozinha; downgrade nunca é oferecido. `GET /api/update` expõe o estado.
-      17 asserções em [`tests/test_updater.py`](tests/test_updater.py), sem rede real.
+**O repositório é público**, e a atualização automática puxa direto do zip do branch.
+Chegou-se a desenhar o n8n servindo o manifesto com o repositório privado atrás; não
+foi preciso. Abrir o repo **não** é "carro sem chave": Python empacotado é
+desempacotável e a verificação de acesso, removível. O que o n8n protege de fato é o
+corte de acesso a quem usa o build oficial — não os perfis, que são públicos por opção.
+
+- [x] **Atualização automática** ([`updater.py`](updater.py)), em duas frentes:
+      *Perfis* — manifesto `versao.json` com sha256 por perfil; baixa só o que mudou,
+      confere o hash, recusa o que não for perfil válido, grava de forma atômica em
+      pasta gravável do usuário (a instalação em `Program Files` não é gravável) e o
+      perfil baixado se sobrepõe ao instalado por nome. Nome de arquivo validado contra
+      `[a-z0-9_-]+\.json`, então manifesto adulterado não escreve fora da pasta.
+      *Programa inteiro* (`sincronizar_repo`) — baixa o zip do branch e grava só o que
+      difere, com a lista de arquivos vinda de dentro do próprio pacote. Sem rede, tudo
+      falha em silêncio e o app trabalha com o que tem. Versão nova do app é
+      **anunciada**, nunca aplicada sozinha; downgrade nunca é oferecido.
+      `GET /api/update` expõe o estado. 24 asserções em
+      [`tests/test_updater.py`](tests/test_updater.py) e 16 em
+      [`tests/test_sincronizacao.py`](tests/test_sincronizacao.py), sem rede real.
 - [x] **Casca `pywebview`** ([`app.py`](app.py)): janela nativa, ícone próprio, porta
       livre em vez de fixa, janela só abre quando o servidor aceita conexão, DPI por
       monitor, e recusa com explicação quando falta a runtime do WebView2 (sem ela o
@@ -296,7 +309,7 @@ chave da OpenAI e o corte de acesso a quem usa o build oficial — não os perfi
       aí vale o crachá offline: usuário, papel, prazo e um **hash** da senha gravados
       no último acesso confirmado. Servidor negando apaga o crachá, então quem foi
       desligado não segue entrando por inércia. HTTPS obrigatório (a senha trafega).
-      31 asserções em [`tests/test_auth.py`](tests/), sem rede real.
+      25 asserções em [`tests/test_auth.py`](tests/), sem rede real.
       **Falta você:** montar o fluxo no n8n — o contrato está no cabeçalho do
       `auth.py`. Enquanto `auth_url` estiver vazia, o login segue local, que é o modo
       de desenvolvimento. Ligar é colar a URL em *Configurações → Controle de acesso*.
@@ -306,8 +319,12 @@ chave da OpenAI e o corte de acesso a quem usa o build oficial — não os perfi
       cliente, na conta dele.
 - [ ] Publicação: rotina que gera `versao.json` com os hashes dos perfis e sobe o
       instalador, para o updater não depender de passo manual.
-- [x] **Furo de acesso resolvido no desenho:** com o `/auth` validando usuário e senha
-      no servidor, some a senha local e o padrão `123` junto com ela.
+- [ ] **O furo de acesso está fechado no código, mas ainda não em produção.** O
+      caminho existe e é testado: com `auth_url` preenchida, a senha local e o padrão
+      `123` deixam de valer. Só que `auth_url` está **vazia** no que foi publicado —
+      porque o fluxo no n8n ainda não existe, e ligar antes disso trancaria o Theo fora
+      do próprio app. Enquanto isso, quem tiver o app instalado entra com `Madu`/`123`.
+      Fecha quando o webhook estiver de pé.
 - [ ] Assinatura de código fica **fora** do escopo: a Microsoft declara que EV não evita
       mais o SmartScreen, e a reputação zera a cada versão. O aviso da primeira execução
       é aceito conscientemente.
