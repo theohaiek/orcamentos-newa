@@ -27,6 +27,60 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
 
 
+def _desfazer(repo):
+    """Apaga todo rastro de uma tentativa de rodar o código de `repo`.
+
+    Duas armadilhas, e as duas já morderam:
+
+    *   `sys.path.remove` tira **uma** ocorrência. O `app.py` do repositório insere
+        a própria pasta no `sys.path` na linha 27, então havia duas — e a que
+        sobrava fazia o "código embutido" continuar importando do repositório
+        quebrado. Era a rede de proteção pegando o mesmo buraco.
+
+    *   Import que falha no meio deixa módulos no `sys.modules`. Sem limpá-los, o
+        retry importa o cadáver em vez do arquivo bom.
+    """
+    alvo = os.path.abspath(repo)
+    sys.path[:] = [p for p in sys.path if os.path.abspath(p) != alvo]
+    for nome, mod in list(sys.modules.items()):
+        f = getattr(mod, "__file__", None)
+        if f and os.path.abspath(f).startswith(alvo + os.sep):
+            sys.modules.pop(nome, None)
+
+
+def _rodar_repo(repo):
+    """Tenta rodar o `app.py` de `repo`. Devolve (rodou, erro)."""
+    import runpy
+    try:
+        os.environ["NEWA_DELEGADO"] = "1"
+        sys.path.insert(0, repo)
+        runpy.run_path(os.path.join(repo, "app.py"), run_name="__main__")
+        return True, None
+    except SystemExit:
+        return True, None
+    except Exception as e:
+        os.environ.pop("NEWA_DELEGADO", None)
+        _desfazer(repo)
+        return False, e
+
+
+def _reparar_repo(repo):
+    """Ressincroniza `repo` usando o updater EMBUTIDO, que é o desta versão.
+
+    O motivo de existir: a sincronização de uma versão anterior pode ter deixado o
+    repositório incompleto — foi o que aconteceu quando o `auth.py` entrou. O
+    updater instalado não conhecia o arquivo novo, baixou o `server.py` que passou
+    a importá-lo e parou aí. A partir daqui o programa conserta isso sozinho, em
+    vez de depender de alguém reinstalar.
+    """
+    try:
+        import updater as _u
+        r = _u.sincronizar_repo(repo)
+        return bool(r.get("atualizados"))
+    except Exception:
+        return False
+
+
 def _delegar_ao_repo():
     """Instalado, o programa roda o código da pasta `repo`, não o que veio embutido.
 
@@ -39,29 +93,31 @@ def _delegar_ao_repo():
     Só acontece no executável empacotado e uma vez só, pela variável de ambiente:
     o código do repositório é este mesmo arquivo, e sem a trava ele se chamaria em
     laço.
+
+    Se o repositório estiver quebrado, tenta consertá-lo antes de desistir; e se
+    ainda assim não rodar, cai para a cópia embutida, que veio testada no
+    instalador. Repositório quebrado nunca pode impedir o programa de abrir.
     """
     if not getattr(sys, "frozen", False) or os.environ.get("NEWA_DELEGADO") == "1":
         return False
     repo = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(sys.executable))), "repo")
-    alvo = os.path.join(repo, "app.py")
-    if not (os.path.isfile(alvo) and os.path.isfile(os.path.join(repo, "server.py"))):
+    if not (os.path.isfile(os.path.join(repo, "app.py"))
+            and os.path.isfile(os.path.join(repo, "server.py"))):
         return False
-    try:
-        import runpy
-        os.environ["NEWA_DELEGADO"] = "1"
-        sys.path.insert(0, repo)
-        runpy.run_path(alvo, run_name="__main__")
+
+    rodou, erro = _rodar_repo(repo)
+    if rodou:
         return True
-    except SystemExit:
-        return True
-    except Exception as e:
-        # Repositório quebrado não pode impedir o programa de abrir: cai para a
-        # cópia embutida, que é a que veio testada no instalador.
-        sys.stderr.write(f"[aviso] não consegui usar o código de 'repo' ({e}); usando o embutido\n")
-        os.environ.pop("NEWA_DELEGADO", None)
-        if repo in sys.path:
-            sys.path.remove(repo)
-        return False
+    sys.stderr.write(f"[aviso] o código de 'repo' não subiu ({erro}); tentando atualizar\n")
+
+    if _reparar_repo(repo):
+        rodou, erro = _rodar_repo(repo)
+        if rodou:
+            return True
+        sys.stderr.write(f"[aviso] mesmo atualizado, não subiu ({erro})\n")
+
+    sys.stderr.write("[aviso] usando o código embutido no programa\n")
+    return False
 
 
 if _delegar_ao_repo():

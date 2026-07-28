@@ -66,10 +66,8 @@ Backlog de melhorias e correções. Marque `[x]` ao concluir.
       /acima) e deixar o usuário confirmar em *Modelos de Entrada*. A partir do segundo
       envio daquela seguradora a extração vira determinística.
 - [ ] Editar/gerenciar perfis pela UI (seção *Modelos de Entrada*).
-- [ ] Campos que nenhum layout entrega hoje: `valor_fipe` (a maioria traz só o código
-      FIPE) e `condutores_18_26` em parte dos layouts.
-- [ ] Cotações **multi-oferta** (Allianz traz 6 planos lado a lado): hoje o perfil só
-      declara o que é idêntico entre as ofertas. Falta o usuário escolher a oferta.
+- [ ] `valor_fipe` (0/15) e `condutores_18_26` (9/15) — ver *Próxima sessão*, item 3.
+- [ ] Cotações **multi-oferta** — ver *Próxima sessão*, item 2.
 - [ ] Suporte real a comparar 3–5 propostas (hoje em beta).
 
 ## Auditoria de 2026-07-26 — corrigido
@@ -140,6 +138,80 @@ no trabalho da v0.3. O que já foi corrigido:
       escrevia por cima e apagava o que dava para recuperar. Aconteceu de verdade nesta
       máquina, com a configuração de desenvolvimento. Agora só migra config lida.
 
+- [x] **A atualização automática podia impedir o app de abrir.** Dois defeitos que
+      só apareceram juntos, ao publicar o `auth.py` — e o efeito somado foi a
+      instalação desta máquina parar de abrir:
+      1. *A lista de arquivos envelhecia junto com o updater instalado.* Ela era uma
+         constante no `updater.py`. O updater da versão instalada baixou o
+         `server.py` novo (que passou a fazer `import auth`) e **ignorou o `auth.py`**,
+         porque a lista dele, antiga, não conhecia o arquivo. Agora a lista viaja
+         dentro do pacote baixado (`data/sincronizar.json`), então quem descreve o
+         conjunto é sempre a versão que está sendo instalada. As travas de caminho
+         (`..`, absoluto, `:`) continuam valendo venha a lista de onde vier.
+      2. *A rede de proteção não protegia.* O `app.py` já tinha o "se o repositório
+         quebrar, use a cópia embutida", mas fazia `sys.path.remove(repo)` — que tira
+         **uma** ocorrência. O `app.py` do repositório insere a própria pasta no
+         `sys.path`, então havia duas, e a que sobrava fazia o código "embutido"
+         continuar importando do repositório quebrado. Agora remove todas, limpa os
+         módulos meio-importados, **tenta ressincronizar** com o updater embutido e
+         só então desiste para a cópia embutida.
+      Coberto por `tests/test_sincronizacao.py`.
+
+## Próxima sessão — decidido com o Theo em 28/07
+
+### 1. Instalar numa máquina que não seja a de desenvolvimento
+
+O instalador nunca rodou em outro computador, e o trecho que instala o WebView2
+sozinho **nunca foi exercitado** — esta máquina já tem o componente, então ele sempre
+entrou pelo caminho "já instalado". É código escrito e não testado.
+
+Roteiro, de preferência num Windows 11 e num Windows 10 desatualizado:
+
+1. Copiar a pasta `DEMONSTRAÇÃO INSTALAÇAO` inteira, ou só o
+   `Instalar Orcamentos NEWA.exe` (para exercitar o modo que baixa do GitHub).
+2. Executar. Anotar: apareceu o SmartScreen? Deu para passar com "Mais informações →
+   Executar assim mesmo", ou o Windows **bloqueou de vez**? (Smart App Control ligado
+   recusa binário sem assinatura, e não é o mesmo que o aviso.)
+3. Ver se o antivírus da máquina reclama do executável — PyInstaller sem assinatura
+   dá falso positivo com alguma frequência.
+4. Conferir a linha `componente de tela (WebView2)` na saída: se disser "não
+   encontrado, instalando", é a primeira vez que esse caminho roda de verdade.
+5. Abrir pelo atalho da Área de Trabalho e fazer um orçamento inteiro, até o PDF.
+
+Só x64. Windows 32 bits não roda, e não está previsto.
+
+### 2. Multi-oferta: escolher a oferta, com pré-visualização
+
+Hoje o app detecta que há várias ofertas (15/15 nos PDFs de amostra, sem falso
+positivo), lê a primeira coluna e joga os campos que dependem do plano para
+conferência — 15 campos, na Allianz. Foi a fricção que travou o uso em 27/07.
+
+O que fazer: ao detectar multi-oferta, abrir uma escolha em *dropdown* com os planos
+e seus preços, **mostrando a área do documento que está sendo lida e a que está sendo
+descartada**. A infraestrutura para isso já existe: cada campo carrega `page` + `bbox`
+na proveniência, e há `GET /api/crop` recortando região da página. Escolhida a oferta,
+a extração passa a ler aquela coluna e os campos saem de conferência.
+
+### 3. `valor_fipe` e `condutores_18_26` — o que exatamente falta
+
+São dois problemas diferentes que estavam na mesma linha, e daí a confusão.
+
+**`valor_fipe` — 0 de 15.** Medido nos PDFs de amostra: os 15 mencionam a FIPE, e
+**nenhum traz o valor em reais**. O que existe é o *código* FIPE, que identifica o
+modelo (`093017-2`, o mesmo veículo em todas as cotações), não quanto ele vale. Ou
+seja: não é o motor que está falhando em achar — o dado **não está no documento**.
+Nossas escolhas eram três, e você pediu para detalhar antes de escolher:
+
+- digitar à mão (proveniência manual, ponto azul) — sem dependência externa;
+- consultar a tabela FIPE por API a partir do código impresso — preenche sozinho, mas
+  depende de rede e de terceiro, e a FIPE do mês pode não ser a que a seguradora usou;
+- assumir "não consta no PDF" (cinza) e tirar da proposta.
+
+**`condutores_18_26` — 9 de 15.** Este o motor extrai onde o dado existe. Os 6 que
+faltam (azul, itaú, justos, mitsui, porto, suhai) não declaram a informação em lugar
+nenhum do documento — não é regra faltando no perfil. Vale conferir um a um antes de
+concluir: pode ser que em algum deles a informação exista com outro nome.
+
 ## Pendências críticas
 
 - [x] **A chave da OpenAI saiu do código e do disco.** Não há mais `.env`, nem leitura
@@ -163,8 +235,8 @@ no trabalho da v0.3. O que já foi corrigido:
   escopo** — não existe port PHP em produção nem previsto. Fica registrado porque
   a divergência é do motor de âncoras, não do parser: se o port voltar à mesa,
   esses três casos são o ponto de partida.
-- [ ] **Escolha de oferta pelo usuário** em PDFs multi-oferta: hoje só avisamos. O certo
-      é listar as ofertas e deixar escolher.
+- [ ] **Escolha de oferta pelo usuário** em PDFs multi-oferta — ver *Próxima sessão*,
+      item 2.
 - [x] **Motor versionado.** `server.py`, `extract_engine.py` e `index.html` entraram no
       repositório.
 - [x] **Modelo padrão de volta ao `gpt-4o-mini`.** A métrica que sustentou o

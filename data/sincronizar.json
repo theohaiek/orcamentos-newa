@@ -1,0 +1,13 @@
+{
+  "_comentario": "Arquivos que compõem o programa na máquina do usuário. O updater lê esta lista de DENTRO do pacote que acabou de baixar, e não da cópia instalada — assim uma versão que acrescenta um arquivo novo consegue descrevê-lo, mesmo rodando sob um updater antigo. Nada fora desta lista é escrito. Testes, documentação e scripts de build não vão para a máquina do usuário. Entradas terminadas em / são pastas inteiras.",
+  "arquivos": [
+    "app.py",
+    "server.py",
+    "extract_engine.py",
+    "updater.py",
+    "auth.py",
+    "index.html",
+    "data/",
+    "orcamentos-newa/"
+  ]
+}

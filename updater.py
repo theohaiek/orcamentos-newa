@@ -191,13 +191,42 @@ SINCRONIZAR = ("app.py", "server.py", "extract_engine.py", "updater.py", "auth.p
                "index.html", "data/", "orcamentos-newa/")
 
 
-def _permitido(rel):
+# A lista viaja DENTRO do pacote baixado, neste arquivo. Sem isso ela envelhece
+# junto com o `updater.py` instalado: quando uma versão nova acrescenta um arquivo
+# (foi o caso do `auth.py`) e faz o `server.py` importá-lo, o updater antigo baixa o
+# `server.py` novo e ignora o arquivo que ele passou a precisar — a instalação fica
+# com um repositório que não importa, e o app não abre. Lendo a lista do próprio
+# pacote, quem descreve o conjunto é sempre a versão que está sendo instalada.
+LISTA_NO_PACOTE = "data/sincronizar.json"
+
+
+def _permitido(rel, lista=SINCRONIZAR):
     rel = rel.replace("\\", "/")
+    # Estas continuam valendo sempre, venha a lista de onde vier: são elas que
+    # impedem escrever fora da pasta.
     if ".." in rel.split("/") or rel.startswith("/") or ":" in rel:
         return False
     if "/__pycache__/" in rel or rel.endswith(".pyc"):
         return False
-    return any(rel == p or (p.endswith("/") and rel.startswith(p)) for p in SINCRONIZAR)
+    return any(rel == p or (p.endswith("/") and rel.startswith(p)) for p in lista)
+
+
+def _lista_do_pacote(z, raiz):
+    """Lê `data/sincronizar.json` de dentro do zip. Cai na lista embutida se faltar."""
+    try:
+        bruto = z.read(raiz + LISTA_NO_PACOTE)
+        itens = json.loads(bruto.decode("utf-8-sig")).get("arquivos")
+        if not isinstance(itens, list) or not itens or len(itens) > 200:
+            return SINCRONIZAR
+        limpos = [x for x in itens if isinstance(x, str) and 0 < len(x) <= 200]
+        # A lista precisa conter o próprio arquivo que a descreve, senão a próxima
+        # sincronização volta a não tê-la.
+        if LISTA_NO_PACOTE not in limpos and not any(
+                p.endswith("/") and LISTA_NO_PACOTE.startswith(p) for p in limpos):
+            limpos.append(LISTA_NO_PACOTE)
+        return tuple(limpos) if limpos else SINCRONIZAR
+    except Exception:
+        return SINCRONIZAR
 
 
 def sincronizar_repo(pasta_repo, url=ZIP_REPO, timeout=60.0):
@@ -233,12 +262,14 @@ def sincronizar_repo(pasta_repo, url=ZIP_REPO, timeout=60.0):
     if not nomes:
         r["erro"] = "pacote vazio"; return r
     raiz = nomes[0].split("/")[0] + "/"          # o GitHub embrulha em "<repo>-<branch>/"
+    lista = _lista_do_pacote(z, raiz)
+    r["lista"] = "pacote" if lista is not SINCRONIZAR else "embutida"
     try:
         for n in nomes:
             if n.endswith("/") or not n.startswith(raiz):
                 continue
             rel = n[len(raiz):]
-            if not _permitido(rel):
+            if not _permitido(rel, lista):
                 continue
             novo = z.read(n)
             destino = os.path.join(pasta_repo, *rel.split("/"))

@@ -11,7 +11,8 @@ import os, shutil, subprocess, sys
 TESTS = os.path.dirname(os.path.abspath(__file__))
 ORDEM = ["test_traversal.py", "test_cobertura.py", "test_multioferta.py",
          "test_verificacao_ia.py", "test_validacao_pdf.py", "test_config.py",
-         "test_auth.py", "test_updater.py", "test_export.py", "test_pendencias.js"]
+         "test_auth.py", "test_updater.py", "test_sincronizacao.py", "test_export.py",
+         "test_pendencias.js"]
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
