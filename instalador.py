@@ -133,6 +133,65 @@ def copiar(origem, destino):
     return copiados, iguais
 
 
+# --------------------------------------------------------- componente do Windows
+# O único requisito que não vem embutido no programa. Não é biblioteca de Python
+# (essas o executável carrega todas): é o componente da Microsoft que desenha a
+# tela. Vem de fábrica no Windows 11 e no 10 atualizado; falta em máquina que
+# passou tempo sem atualizar. Sem ele o pywebview cai no motor do Internet
+# Explorer, onde a interface não roda — janela em branco, sem explicação.
+GUID_WV2 = r"{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+BOOTSTRAP_WV2 = "https://go.microsoft.com/fwlink/p/?LinkId=2124703"
+
+
+def tem_webview2():
+    if sys.platform != "win32":
+        return True
+    import winreg
+    for raiz, chave in (
+        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients" "\\" + GUID_WV2),
+        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\EdgeUpdate\Clients" "\\" + GUID_WV2),
+        (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\EdgeUpdate\Clients" "\\" + GUID_WV2),
+    ):
+        try:
+            with winreg.OpenKey(raiz, chave) as k:
+                v, _ = winreg.QueryValueEx(k, "pv")
+                if v and v != "0.0.0.0":
+                    return True
+        except OSError:
+            pass
+    return False
+
+
+def garantir_webview2(tmp):
+    """Instala o WebView2 se faltar. Devolve True se, ao final, ele existe.
+
+    Usa o instalador oficial da Microsoft (~1,5 MB), em modo silencioso e por
+    usuário — assim não pede senha de administrador, mantendo a promessa do resto
+    da instalação. Se não der (sem internet, política da empresa), o programa não
+    fica quebrado em silêncio: a mensagem diz o que baixar.
+    """
+    if tem_webview2():
+        diga("  componente de tela (WebView2): já instalado")
+        return True
+    diga("  componente de tela (WebView2): não encontrado, instalando")
+    try:
+        exe = baixar(BOOTSTRAP_WV2, os.path.join(tmp, "webview2.exe"), "o componente da Microsoft (~2 MB)")
+    except Exception as e:
+        diga(f"    não consegui baixar: {e}")
+        return False
+    import subprocess
+    for args in (["/silent", "/install"], ["/install"]):
+        try:
+            subprocess.run([exe] + args, timeout=600, capture_output=True)
+        except Exception:
+            continue
+        if tem_webview2():
+            diga("    instalado")
+            return True
+    diga("    a instalação automática não concluiu")
+    return False
+
+
 # --------------------------------------------------------------- atalhos
 def criar_atalho(destino_lnk, alvo, dir_trabalho, icone=None, descricao=""):
     """Cria um .lnk pelo próprio Windows, via COM.
@@ -179,7 +238,11 @@ def instalar(destino=None, silencioso=False):
     diga(f"  destino: {destino}\n")
 
     tmp = tempfile.mkdtemp(prefix="newa-inst-")
+    wv2 = True
     try:
+        # ---- 0. o componente de tela do Windows ----------------------------
+        wv2 = garantir_webview2(tmp)
+
         # ---- 1. o programa -------------------------------------------------
         local = origem_do_app()
         if local:
@@ -256,6 +319,15 @@ def instalar(destino=None, silencioso=False):
 
         diga(f"\n  Instalado. Abra pelo atalho “{NOME}” na Área de Trabalho.")
         diga(f"  Para remover: {os.path.join(destino, 'Desinstalar.bat')}")
+        if not wv2:
+            # Falta o único componente que não conseguimos embutir. O programa está
+            # instalado e íntegro, mas não vai conseguir desenhar a tela — melhor
+            # dizer isso agora, em vez de deixar a pessoa abrir uma janela vazia.
+            diga("\n  ATENÇÃO: falta o Microsoft Edge WebView2, e a instalação")
+            diga("  automática dele não concluiu. O programa não vai abrir a janela")
+            diga("  sem ele. Baixe o “Evergreen Runtime” em:")
+            diga("    https://developer.microsoft.com/microsoft-edge/webview2")
+            diga("  Instale e abra o programa de novo.")
         return 0
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
