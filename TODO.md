@@ -140,8 +140,11 @@ no trabalho da v0.3. O que já foi corrigido:
 - [ ] **Redigir dados pessoais antes de enviar à OpenAI.** Hoje vai o **texto integral**
       do PDF: nome, CPF, CEP, placa, chassi. A spec do app desktop afirma o contrário
       ("nenhum PDF sai da máquina") e precisa ser corrigida ou o código, ajustado.
-- [ ] **Corrigir os 3 valores divergentes da via PHP** (`yelum/a_vista`,
-      `aliro/parc_10x`, `yelum/veiculo`) antes de qualquer uso do port em produção.
+- ~~Corrigir os 3 valores divergentes da via PHP~~ (`yelum/a_vista`,
+  `aliro/parc_10x`, `yelum/veiculo`). **Sem efeito desde que o WordPress saiu do
+  escopo** — não existe port PHP em produção nem previsto. Fica registrado porque
+  a divergência é do motor de âncoras, não do parser: se o port voltar à mesa,
+  esses três casos são o ponto de partida.
 - [ ] **Escolha de oferta pelo usuário** em PDFs multi-oferta: hoje só avisamos. O certo
       é listar as ofertas e deixar escolher.
 - [x] **Motor versionado.** `server.py`, `extract_engine.py` e `index.html` entraram no
