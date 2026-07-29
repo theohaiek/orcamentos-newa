@@ -16,7 +16,10 @@
     upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15V3m0 0 4 4m-4-4L8 7"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>',
     layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>',
     users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></svg>',
-    cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H1a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 2.6 7a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H7a1.6 1.6 0 0 0 1-1.5V1a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V7a1.6 1.6 0 0 0 1.5 1H23a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>',
+    // A engrenagem anterior tinha o caminho dos dentes corrompido e desenhava uma
+    // forma sem sentido no menu. Esta é a engrenagem de 8 dentes, geométrica e
+    // legível a 18px, que é o tamanho em que ela aparece.
+    cog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.2v2.6M12 19.2v2.6M21.8 12h-2.6M4.8 12H2.2M18.93 5.07l-1.84 1.84M6.91 17.09l-1.84 1.84M18.93 18.93l-1.84-1.84M6.91 6.91 5.07 5.07"/><path d="M12 6.3a5.7 5.7 0 1 0 0 11.4 5.7 5.7 0 0 0 0-11.4Z" opacity=".55"/></svg>',
     logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m20 6-11 11-5-5"/></svg>',
     alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/></svg>',
@@ -38,7 +41,14 @@
     eyeoff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.7 5.1A9.7 9.7 0 0 1 12 5c6.5 0 10 7 10 7a13.6 13.6 0 0 1-2.2 3M6.6 6.6A13.6 13.6 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 4.3-1M3 3l18 18M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
     tune: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h11M4 12h7M4 18h14"/><circle cx="18" cy="6" r="2"/><circle cx="14" cy="12" r="2"/><circle cx="20" cy="18" r="2"/></svg>',
   };
-  const MARK = '<svg viewBox="0 0 32 32" fill="none"><path d="M4 8 L13 24 L16 18" stroke="#1F9E4A" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 18 L22 8 L28 20" stroke="#12703A" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // Marca d'água da capa. Antes era um "W" solto; agora repete o desenho do logo
+  // da NEWA: as duas hastes em verdes diferentes e o X cruzando no alto à direita.
+  const MARK = '<svg viewBox="0 0 32 32" fill="none">' +
+    '<path d="M3 7.5 L12.5 24 L16.2 17.4" stroke="#1F9E4A" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<path d="M16.2 17.4 L20.6 9.6 L29 22" stroke="#12703A" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<path d="M20.4 5.2 L28.6 12.4" stroke="#1F9E4A" stroke-width="3.2" stroke-linecap="round"/>' +
+    '<path d="M28.6 5.2 L20.4 12.4" stroke="#12703A" stroke-width="3.2" stroke-linecap="round"/>' +
+    "</svg>";
 
   /* ---------------- Definição de campos ---------------- */
   const INFO = [
@@ -616,7 +626,12 @@
     const nameHTML = ph ? '<span class="ph-token">{{primeiro nome}}</span>' : "<b>" + esc(nome) + "</b>";
     let greeting = esc(cv.greeting || "Olá, {{primeiro_nome}}").replace("{{primeiro_nome}}", nameHTML);
     greeting = greeting.replace(/\{\{([^}]+)\}\}/g, '<span class="ph-token">{{$1}}</span>');
+    // `muralIds` vazio ou ausente = todas, que é como o mural sempre funcionou.
+    // Só quando a lista existe é que ela manda — assim quem nunca abriu o seletor
+    // continua vendo o mural completo.
+    const muralSel = Array.isArray(cv.muralIds) && cv.muralIds.length ? cv.muralIds : null;
     const strip = S.insurers.filter((x) => x.id !== "generico")
+      .filter((x) => !muralSel || muralSel.indexOf(x.id) >= 0)
       .map((x) => x.logo
         ? '<div class="ins-logo"><img src="' + esc(x.logo) + '" alt="' + esc(x.name) + '"></div>'
         : '<span class="ins-txt">' + esc(x.name) + "</span>").join("");
@@ -663,9 +678,12 @@
     // banner: quais seguradoras a proposta compara (logo + nome)
     const cmpIns = cols.map((col, i) => {
       const ins = insurerById(col.insurer_id);
-      const logo = ins.logo_small || ins.logo;
+      // O logo GRANDE (com o nome da seguradora) vem primeiro: o pequeno é só o
+      // símbolo, e no banner ele aparecia sem identificação nenhuma. Quando a marca
+      // só tem o símbolo cadastrado, o nome ao lado continua resolvendo.
+      const logo = ins.logo || ins.logo_small;
       const media = logo
-        ? '<span class="cmp-logo"><img src="' + esc(logo) + '" alt="' + esc(ins.name) + '"></span>'
+        ? '<span class="cmp-logo' + (ins.logo ? " big" : "") + '"><img src="' + esc(logo) + '" alt="' + esc(ins.name) + '"></span>'
         : '<span class="cmp-dot" style="background:' + ins.color + '">' + esc(ins.abbr || "") + "</span>";
       return '<div class="cmp-ins"><span class="cmp-badge" style="background:' + ins.color + '">' + (i + 1) + "</span>" +
         media + '<span class="cmp-nm">' + esc(ins.name) + "</span></div>";
@@ -974,6 +992,60 @@
     return steps;
   }
 
+  /* Cabeçalho do assistente: quais seguradoras estão sendo comparadas, com o logo
+     grande (o mesmo da capa), e — quando a cotação traz vários planos lado a lado —
+     o seletor da oferta.
+
+     A escolha da oferta troca APENAS os campos que o servidor conseguiu separar por
+     coluna com duas regras independentes concordando. O que ele não separou continua
+     como está, e todo campo dependente de oferta segue exigindo confirmação. Ou seja:
+     escolher a oferta nunca deixa a extração pior do que ela já era. */
+  function ofertasDaColuna(col) {
+    const o = col && col.ofertas;
+    return o && o.por_campo && Object.keys(o.por_campo).length ? o : null;
+  }
+
+  function renderWizInsurers() {
+    const host = $("#wiz-ins"); if (!host) return;
+    host.innerHTML = S.proposal.columns.map((col, ci) => {
+      const ins = insurerById(col.insurer_id);
+      const marca = ins.logo
+        ? '<img class="wiz-ins-logo" src="' + esc(ins.logo) + '" alt="' + esc(ins.name) + '">'
+        : '<span class="wiz-ins-nm" style="color:' + ins.color + '">' + esc(ins.name) + "</span>";
+      const of = ofertasDaColuna(col);
+      let sel = "";
+      if (of) {
+        const atual = col.oferta_escolhida == null ? 0 : col.oferta_escolhida;
+        sel = '<select class="wiz-of" data-of-col="' + ci + '" title="Este documento cota ' + of.n +
+          ' planos lado a lado. Escolha qual vai para a proposta.">' +
+          of.valores.map((v, k) => '<option value="' + k + '"' + (k === atual ? " selected" : "") +
+            ">Plano " + (k + 1) + " · R$ " + esc(v) + "</option>").join("") + "</select>";
+      }
+      return '<div class="wiz-ins-item"><span class="badge-n">' + (ci + 1) + "</span>" + marca + sel + "</div>";
+    }).join("");
+
+    host.querySelectorAll("[data-of-col]").forEach((s) => (s.onchange = () => {
+      const ci = +s.dataset.ofCol, k = +s.value;
+      const col = S.proposal.columns[ci], of = ofertasDaColuna(col);
+      if (!of) return;
+      let n = 0;
+      Object.keys(of.por_campo).forEach((campo) => {
+        const v = of.por_campo[campo][k];
+        if (v == null) return;
+        col.fields[campo] = v;
+        const p = col.provenance[campo];
+        if (p) {
+          p.confidence = "baixa";      // continua pedindo confirmação, como antes
+          p.motivo = "valor do plano " + (k + 1) + " (R$ " + of.valores[k] + "), escolhido por você";
+        }
+        n++;
+      });
+      col.oferta_escolhida = k;
+      renderWizStep();
+      toast(n + " campo(s) trocados para o plano " + (k + 1) + ". Confirme antes de gerar.", "ok");
+    }));
+  }
+
   function openConfirmWizard() {
     S._wiz = { step: 0, mode: "page", steps: buildSteps() };
     const ex = document.querySelector(".wiz-overlay"); if (ex) ex.remove();
@@ -982,6 +1054,7 @@
     ov.innerHTML =
       '<div class="wiz card">' +
       '<div class="wiz-top"><div class="wiz-ttl"><div class="wiz-eyebrow">Conferência antes de gerar</div><h2 id="wiz-h"></h2></div>' +
+      '<div class="wiz-ins" id="wiz-ins"></div>' +
       '<div class="wiz-modes" id="wiz-modes"><span class="pt-lbl">Fonte:</span>' +
       '<button data-wm="page" class="on">Destaque na página</button><button data-wm="crop">Recortes</button></div>' +
       '<button class="btn icon ghost" data-wclose>' + I.x + "</button></div>" +
@@ -993,6 +1066,7 @@
       '<div class="wiz-count" id="wiz-count"></div>' +
       '<button class="btn" id="wiz-next">Próximo</button></div></div>';
     document.body.appendChild(ov);
+    renderWizInsurers();
     ov.querySelector("[data-wclose]").onclick = () => ov.remove();
     ov.querySelectorAll("[data-wm]").forEach((b) => (b.onclick = () => {
       S._wiz.mode = b.dataset.wm;
@@ -1473,12 +1547,30 @@
       '<div class="erow" data-idx="' + i + '" data-list="para">' + grip +
       '<textarea class="input erow-in" data-bind="para" data-i="' + i + '" rows="2">' + esc(p) + "</textarea>" +
       '<button class="btn icon ghost edel" data-del="para" data-i="' + i + '">' + I.trash + "</button></div>").join("");
+    // Seletor de quais seguradoras aparecem no mural da capa. Fica recolhido:
+    // são 23 marcas, e a lista aberta empurraria o resto do formulário para fora
+    // da tela. O rótulo diz quantas estão marcadas sem precisar abrir.
+    function muralPicker() {
+      const todas = S.insurers.filter((x) => x.id !== "generico");
+      const sel = Array.isArray(E.cover.muralIds) && E.cover.muralIds.length ? E.cover.muralIds : null;
+      const n = sel ? sel.length : todas.length;
+      return '<details class="mural-pick mt"' + (E.cover.showMural ? "" : " hidden") + ">" +
+        "<summary>Quais aparecem no mural <b>" + n + " de " + todas.length + "</b></summary>" +
+        '<div class="mural-acts"><button type="button" class="btn ghost sm" data-mural="all">Marcar todas</button>' +
+        '<button type="button" class="btn ghost sm" data-mural="none">Desmarcar todas</button></div>' +
+        '<div class="mural-list">' + todas.map((x) =>
+          '<label class="echk"><input type="checkbox" data-mural-id="' + esc(x.id) + '"' +
+          ((!sel || sel.indexOf(x.id) >= 0) ? " checked" : "") + "> " + esc(x.name) + "</label>").join("") +
+        "</div></details>";
+    }
+
     const capa = card("Capa",
       '<label class="echk"><input type="checkbox" data-bind="cover.show"' + (E.cover.show ? " checked" : "") + "> Mostrar capa</label>" +
       '<div class="field mt"><label>Saudação <span class="muted">(use {{primeiro_nome}})</span></label><input class="input" data-bind="cover.greeting" value="' + esc(E.cover.greeting) + '"></div>' +
       '<div class="elabel mt">Parágrafos</div><div class="elist" data-listwrap="para">' + paras + "</div>" +
       '<button class="btn secondary sm" data-add="para">' + I.plus + " Adicionar parágrafo</button>" +
       '<label class="echk mt"><input type="checkbox" data-bind="cover.showMural"' + (E.cover.showMural ? " checked" : "") + "> Mostrar mural de seguradoras</label>" +
+      muralPicker() +
       '<div class="field mt"><label>Texto acima do mural</label><input class="input" data-bind="cover.muralLabel" value="' + esc(E.cover.muralLabel) + '"></div>' +
       '<label class="echk mt"><input type="checkbox" data-bind="cover.showContact"' + (E.cover.showContact ? " checked" : "") + "> Mostrar bloco de contato</label>");
 
@@ -1543,6 +1635,24 @@
       };
       el.addEventListener(el.type === "checkbox" ? "change" : "input", handler);
     });
+    // seleção individual das seguradoras do mural. Guarda a lista só quando ela é
+    // um subconjunto: com todas marcadas o campo volta a ficar vazio, que é o
+    // estado "mural completo" de sempre.
+    const todasIds = () => S.insurers.filter((x) => x.id !== "generico").map((x) => x.id);
+    const gravaMural = () => {
+      const marcados = [...ctrl.querySelectorAll("[data-mural-id]")].filter((c) => c.checked)
+        .map((c) => c.dataset.muralId);
+      E.cover.muralIds = marcados.length === todasIds().length ? [] : marcados;
+      const s = ctrl.querySelector(".mural-pick summary b");
+      if (s) s.textContent = (marcados.length || todasIds().length) + " de " + todasIds().length;
+      rp();
+    };
+    ctrl.querySelectorAll("[data-mural-id]").forEach((c) => c.addEventListener("change", gravaMural));
+    ctrl.querySelectorAll("[data-mural]").forEach((b) => (b.onclick = () => {
+      const marcar = b.dataset.mural === "all";
+      ctrl.querySelectorAll("[data-mural-id]").forEach((c) => (c.checked = marcar));
+      gravaMural();
+    }));
     // toggles de visibilidade
     ctrl.querySelectorAll("[data-tog]").forEach((b) => (b.onclick = () => {
       const t = b.dataset.tog, i = +b.dataset.i, s = +b.dataset.s;
