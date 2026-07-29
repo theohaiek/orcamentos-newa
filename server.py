@@ -510,8 +510,122 @@ def detect_offers(pages):
                 melhor = {"n": len(nums), "valores": [f"{x:,.2f}".replace(",", "@")
                                                       .replace(".", ",").replace("@", ".")
                                                       for x in nums],
-                          "pagina": p["n"], "trecho": l["text"][:160]}
+                          "pagina": p["n"], "trecho": l["text"][:160],
+                          "linha": l, "page": p}
     return melhor
+
+
+# ------------------------------------------------- escolha da oferta pelo usuário
+# Medido nos dois PDFs multi-oferta da amostra: cada oferta ocupa DUAS sub-colunas
+# nas linhas de cobertura (limite e prêmio) e uma só na linha de total. Duas regras
+# independentes conseguem separá-las:
+#
+#   A · geométrica — fronteira de x no meio do caminho entre os totais;
+#   B · por contagem — a linha tem k*N valores em ordem de oferta.
+#
+# Na Allianz as duas concordam em 23 de 23 linhas; no HDI, em 17 de 24, porque lá a
+# fronteira do total cai em cima de valores das coberturas. Com dois documentos na
+# amostra não dá para eleger uma regra, então **o valor só é oferecido quando as
+# duas concordam** — onde discordam, o campo fica como está hoje.
+#
+# Nada aqui altera a extração: ela roda igual e primeiro. Isto é uma segunda
+# passada que apenas OFERECE o valor das outras colunas, e o campo continua
+# pendente de confirmação, exatamente como já ficava em documento multi-oferta.
+
+def _tokens_moeda(line):
+    return [t for t in line["tokens"] if _MOEDA_RE.fullmatch(t["t"].strip())]
+
+
+def _grupos_por_oferta(line, fronteiras, n):
+    """Valores da linha separados por oferta, ou None se as duas regras discordarem."""
+    toks = _tokens_moeda(line)
+    if len(toks) < n or len(toks) % n:
+        return None
+    k = len(toks) // n
+
+    def faixa(t):
+        x = (t["x0"] + t["x1"]) / 2
+        for i, f in enumerate(fronteiras):
+            if x < f:
+                return i
+        return n - 1
+
+    a = [[t for t in toks if faixa(t) == i] for i in range(n)]
+    b = [toks[i * k:(i + 1) * k] for i in range(n)]
+    if [[t["t"] for t in g] for g in a] != [[t["t"] for t in g] for g in b]:
+        return None                     # regras discordam: não arrisca
+    # fronteira não pode cortar um valor ao meio
+    if any(t["x0"] < f < t["x1"] for t in toks for f in fronteiras):
+        return None
+    return a
+
+
+def _linha_do_valor(pages, prov):
+    """Acha a linha de onde um campo foi extraído, pela página e caixa da proveniência."""
+    if not prov or not prov.get("bbox") or not prov.get("page"):
+        return None
+    x0, y0, x1, y1 = prov["bbox"]
+    cy = (y0 + y1) / 2
+    for p in pages:
+        if p["n"] != prov["page"]:
+            continue
+        for l in p["lines"]:
+            b = l["bbox"]
+            if b[1] - 1 <= cy <= b[3] + 1 and b[0] - 1 <= x0 and x1 <= b[2] + 1:
+                return l
+    return None
+
+
+def valores_por_oferta(pages, ofertas, fields, provenance):
+    """Para cada campo que depende da oferta, o valor de CADA coluna.
+
+    Devolve `{campo: [valor_oferta_1, valor_oferta_2, ...]}` apenas para os campos
+    em que foi possível separar as colunas com segurança. Campo ausente daqui é
+    campo que continua como está — o comportamento de hoje.
+    """
+    linha_total = ofertas.get("linha")
+    if not linha_total:
+        return {}
+    centros = [(t["x0"] + t["x1"]) / 2 for t in _tokens_moeda(linha_total)]
+    n = ofertas["n"]
+    if len(centros) != n:
+        return {}
+    fronteiras = [(centros[i] + centros[i + 1]) / 2 for i in range(n - 1)]
+
+    out = {}
+    for campo in _CAMPOS_POR_OFERTA:
+        atual = (fields.get(campo) or "").strip()
+        if not atual:
+            continue
+        # só campos cujo valor É um número em moeda: nos demais (Sim/Não, "100%
+        # FIPE", "400 KM") a separação por coluna monetária não se aplica
+        crua = atual.replace("R$", "").strip()
+        if not _MOEDA_RE.fullmatch(crua):
+            continue
+        linha = _linha_do_valor(pages, provenance.get(campo))
+        if not linha:
+            continue
+        grupos = _grupos_por_oferta(linha, fronteiras, n)
+        if not grupos:
+            continue
+        # dentro do grupo, pega o valor na mesma posição em que o atual aparece no
+        # seu próprio grupo — é o que mantém "limite" alinhado com "limite" e
+        # "prêmio" com "prêmio"
+        pos = None
+        for i, g in enumerate(grupos):
+            for j, t in enumerate(g):
+                if t["t"].strip() == crua:
+                    pos = j; break
+            if pos is not None:
+                break
+        if pos is None:
+            continue
+        valores = []
+        for g in grupos:
+            valores.append(("R$ " + g[pos]["t"].strip()) if atual.startswith("R$") else g[pos]["t"].strip())
+        if len(set(valores)) > 1:      # coluna que não muda nada não precisa de escolha
+            out[campo] = valores
+    return out
 
 
 def save_upload(pdf_bytes):
@@ -664,13 +778,18 @@ def extract_pdf(pdf_bytes, filename=""):
     # --- Multi-oferta: rebaixar o que depende da oferta escolhida --------------
     ofertas = detect_offers(pages)
     if ofertas:
+        # segunda passada, depois da extração e sem tocar nela: o valor de cada
+        # coluna, para o usuário poder escolher a oferta em vez de só conferir
+        ofertas["por_campo"] = valores_por_oferta(pages, ofertas, fields, provenance)
+        ofertas.pop("linha", None)     # tokens não vão para o cliente
+        ofertas.pop("page", None)
         for k in _CAMPOS_POR_OFERTA:
             p = provenance.get(k)
             if p and fields.get(k):
                 p["confidence"] = "baixa"
                 p["motivo"] = (f"o documento cota {ofertas['n']} ofertas lado a lado e "
-                               f"este valor foi lido da primeira coluna — confirme se é "
-                               f"a oferta correta")
+                               f"este valor foi lido da primeira coluna. Escolha a oferta "
+                               f"no topo do assistente ou confirme o valor.")
 
     # --- Avisos: tudo que o usuário PRECISA ver antes de gerar ----------------
     # Regra do produto: nunca entregar documento incompleto ou mal mapeado em
