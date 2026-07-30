@@ -121,6 +121,23 @@ for rotulo, kw in (
     r = auth.autenticar(URL, "madu", "senha-boa", CACHE, "0.4.0")
     ok(not r["ok"], f"{rotulo} nega")
 
+print(">> 5b. o motivo da recusa vem do servidor, mesmo em 4xx")
+# Com o n8n respondendo 401 para senha errada, o corpo é a única coisa que
+# distingue "senha errada" de "senha alterada". Se ele for descartado, a tela só
+# consegue dizer "acesso negado" e a pessoa não sabe o que fazer.
+for cod in (401, 403, 422):
+    responde({"ok": False, "erro": "sua senha foi alterada"}, status=cod)
+    r = auth.autenticar(URL, "madu", "x", CACHE, "1.0.0")
+    ok(not r["ok"] and r["mensagem"] == "sua senha foi alterada",
+       f"HTTP {cod}: a mensagem do corpo chega à tela")
+
+print(">> 5c. webhook respondendo antes de conferir é erro de configuração, não senha errada")
+responde({"message": "Workflow was started"})
+r = auth.autenticar(URL, "madu", "x", CACHE, "1.0.0")
+ok(not r["ok"], "não libera")
+ok(r["origem"] == "config" and "Respond to Webhook" in r["mensagem"],
+   f"e diz onde está o problema: {r['mensagem'][:60]}...")
+
 print(">> 6. 5xx é problema do servidor, não das credenciais")
 responde({"ok": True}, status=200)
 auth.autenticar(URL, "madu", "senha-boa", CACHE, "0.4.0")        # regrava o crachá

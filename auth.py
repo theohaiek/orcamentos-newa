@@ -126,8 +126,22 @@ def _pedir(url, corpo, timeout):
         with urllib.request.urlopen(req, timeout=timeout) as r:
             bruto = r.read(64 * 1024)
     except urllib.error.HTTPError as e:
-        # 5xx é problema do servidor; 4xx é resposta sobre as credenciais.
-        return None, e.code >= 500
+        # 5xx é problema do servidor e libera o crachá offline; 4xx é resposta sobre
+        # as credenciais. O CORPO do 4xx é lido: é ele que diz se a senha está errada
+        # ou se foi alterada, e sem isso a tela só conseguiria dizer "acesso negado".
+        if e.code >= 500:
+            return None, True
+        try:
+            d = json.loads(e.read(64 * 1024).decode("utf-8", "replace"))
+        except Exception:
+            return None, False
+        if not isinstance(d, dict):
+            return None, False
+        # O status manda: 4xx NUNCA autoriza, mesmo que o corpo diga `ok: true`.
+        # Sem esta linha, um fluxo mal montado que devolvesse 401 com ok:true
+        # abriria o app — o corpo é lido pela mensagem, não pela decisão.
+        d["ok"] = False
+        return d, False
     except Exception:
         return None, True                     # sem rede, DNS, timeout, TLS
     try:
@@ -175,6 +189,16 @@ def autenticar(url, usuario, senha, cache_path, versao="", timeout=TIMEOUT):
         return {"ok": True, "user": pessoa, "origem": "servidor", "mensagem": ""}
 
     if not indisponivel:
+        # Erro de configuração que vale detectar pelo nome: o nó de webhook do n8n
+        # sai de fábrica em "responder imediatamente", e aí ele devolve 200 com
+        # {"message":"Workflow was started"} SEM esperar o fluxo terminar. O app
+        # nega (o contrato exige ok:true), mas negar dizendo "senha inválida"
+        # mandaria a pessoa procurar no lugar errado.
+        if isinstance(d, dict) and "ok" not in d and "workflow" in str(d.get("message", "")).lower():
+            return {"ok": False, "user": None, "origem": "config",
+                    "mensagem": ("o servidor de acesso respondeu antes de conferir a senha. "
+                                 "No n8n, o nó de webhook precisa responder pelo nó "
+                                 "'Respond to Webhook', e não imediatamente.")}
         # O servidor respondeu e não liberou. Some o crachá: se a pessoa foi
         # desligada, não faz sentido o app continuar aceitando o crachá antigo.
         if chave in cache:
