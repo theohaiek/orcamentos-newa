@@ -50,6 +50,13 @@
     '<path d="M28.6 5.2 L20.4 12.4" stroke="#12703A" stroke-width="3.2" stroke-linecap="round"/>' +
     "</svg>";
 
+  // Anéis concêntricos que saem da marca. A opacidade cai de dentro para fora, o
+  // que dispensa qualquer camada de esmaecimento por cima do conteúdo.
+  const RINGS = '<svg viewBox="0 0 100 100" fill="none">' +
+    [11, 18, 25, 32, 39, 46].map((r, i) =>
+      '<circle cx="50" cy="50" r="' + r + '" stroke="#1F9E4A" stroke-width="0.32" opacity="' +
+      (0.34 - i * 0.05).toFixed(2) + '"/>').join("") + "</svg>";
+
   /* ---------------- Definição de campos ---------------- */
   const INFO = [
     ["segurado", "Segurado", true],
@@ -640,6 +647,7 @@
       cover =
         '<div class="doc-page cover" data-page="1"><div class="topgrad"></div><div class="safe">' +
         '<div class="logo"><img class="logo-img" src="' + LOGO + '" alt="NEWA Seguros"></div>' +
+        '<div class="hero-rings">' + RINGS + "</div>" +
         '<div class="hero-mark">' + MARK + "</div>" +
         '<div class="hello"><h1>' + greeting + "</h1></div>" +
         '<div class="letter">' + cv.paragraphs.map((p) => "<p>" + mark(p) + "</p>").join("") + "</div>" +

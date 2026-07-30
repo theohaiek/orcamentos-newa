@@ -19,19 +19,16 @@
 /* ---------------- CAPA (página 1) ---------------- */
 .cover { position: relative; }
 .cover .safe { padding: 48px 48px 36px; display: flex; flex-direction: column; min-height: 1000px; position: relative; z-index: 1; }
-.cover .hero-mark { position: absolute; right: -10px; top: 300px; width: 340px; height: 340px; z-index: 0; pointer-events: none; }
-.cover .hero-mark svg { position: relative; z-index: 1; width: 100%; height: 100%; opacity: .06; }
-/* Grade concêntrica saindo da marca. Mais fraca ainda que a própria marca: de
-   perto quase não se vê, de longe dá profundidade ao canto da capa. O esmaecido
-   é feito com um gradiente branco por cima, e não com `mask`, porque o html2canvas
-   (que gera o PDF) não aplica máscara e a grade sairia como um quadrado sólido. */
-.cover .hero-mark::before {
-  content: ""; position: absolute; left: 50%; top: 50%; width: 940px; height: 940px;
-  transform: translate(-50%, -50%); z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(circle, rgba(255,255,255,0) 26%, #fff 68%),
-    repeating-radial-gradient(circle, rgba(31,158,74,.05) 0 1px, rgba(31,158,74,0) 1px 30px);
-}
+.cover .hero-mark { position: absolute; right: -10px; top: 300px; width: 340px; height: 340px; opacity: .06; z-index: 0; pointer-events: none; }
+.cover .hero-mark svg { width: 100%; height: 100%; }
+/* Grade concêntrica saindo da marca, ainda mais fraca que ela.
+   Os anéis são desenhados DENTRO do SVG, com a opacidade caindo de dentro para
+   fora, e não com um gradiente branco por cima: a versão com gradiente pintava
+   por cima do texto da capa e comia o nome do cliente. Sem camada branca não há
+   o que cobrir, e o html2canvas (que gera o PDF) desenha SVG sem problema. */
+.cover .hero-rings { position: absolute; right: -285px; top: 15px; width: 910px; height: 910px;
+  opacity: .18; z-index: 0; pointer-events: none; }
+.cover .hero-rings svg { width: 100%; height: 100%; }
 .cover .strip-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 11px; }
 .cover .logo { display: flex; align-items: center; gap: 12px; }
 .cover .logo .logo-img { width: 96px; height: 96px; object-fit: contain; display: block; }
