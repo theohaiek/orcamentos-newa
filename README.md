@@ -1,4 +1,4 @@
-# Orçamentos NEWA · v0.4
+# Orçamentos NEWA · v1.0
 
 Aplicativo para **gerar propostas comparativas de seguro auto** a partir dos PDFs de
 cotação de várias seguradoras. Você envia os PDFs, o app reconhece e normaliza os
@@ -70,10 +70,11 @@ cabeçalho de [`auth.py`](auth.py).
 Para desenvolvimento e edição ao vivo do visual, veja
 [Desenvolvimento local](#desenvolvimento-local-edição-ao-vivo).
 
-> **Status: v0.4** — app desktop empacotado, instalável e se atualizando sozinho.
+> **Status: v1.0** — app desktop empacotado, instalável e se atualizando sozinho.
 > **80% dos campos** saem da extração determinística (auditável, sem IA) nas 15
-> seguradoras de amostra. O que falta para a V1 e o que ainda **não** é verdade estão
-> em [`TODO.md`](TODO.md) e em [Distribuição](#distribuição--decidido-app-desktop-windows).
+> seguradoras de amostra. O que ainda **não** é verdade está em [`TODO.md`](TODO.md)
+> e em [Distribuição](#distribuição--decidido-app-desktop-windows) — leia antes de
+> distribuir para alguém.
 
 ---
 
@@ -99,6 +100,11 @@ Para desenvolvimento e edição ao vivo do visual, veja
   seguradora (editável).
 - **Nunca gera incompleto:** campos obrigatórios vazios bloqueiam a geração e são
   destacados; erros de extração aparecem com o motivo.
+- **Cotação com vários planos lado a lado** (a Allianz cota 3, a HDI 2) é detectada, e
+  o assistente traz um **seletor de plano** no cabeçalho. Escolher troca os campos que
+  o servidor conseguiu separar por coluna com duas regras independentes concordando;
+  os demais ficam como estavam. Em qualquer caso os campos seguem exigindo confirmação
+  — a escolha nunca deixa a extração pior do que ela já era.
 - **Editor de modelo:** edite o layout do documento gerado (seções, campos, textos,
   ordem) com pré-visualização em placeholders.
 - **Exportação em PDF** (capa + comparativo) com um clique, salva em

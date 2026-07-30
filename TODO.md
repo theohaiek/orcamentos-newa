@@ -158,6 +158,44 @@ no trabalho da v0.3. O que já foi corrigido:
          só então desiste para a cópia embutida.
       Coberto por `tests/test_sincronizacao.py`.
 
+## v1.0 — 29/07
+
+Fechada para a reunião de 30/07. O que entrou nesta versão, e as decisões que eu
+tomei sozinho porque o Theo estava dormindo — todas sob a regra que ele deu:
+**nunca piorar a extração de nenhuma forma.**
+
+- [x] **Escolha do plano em cotação multi-oferta.** A detecção já existia; o que
+      faltava era escolher. Medi antes de construir, e a medição derrubou duas
+      hipóteses minhas: cada oferta ocupa **duas** sub-colunas nas linhas de cobertura
+      (limite e prêmio) e **uma só** na linha de total, e a primeira sonda que escrevi
+      reprovava linhas corretas por exigir um valor por coluna.
+      Duas regras independentes separam as colunas: fronteira de x tirada do total, e
+      divisão por contagem. **Allianz: concordam em 23 de 23 linhas. HDI: 17 de 24**,
+      porque lá a fronteira do total cai em cima de valores de cobertura.
+      *Decisão:* com dois documentos multi-oferta na amostra não dá para eleger uma
+      regra, então o valor **só é oferecido quando as duas concordam**. Onde discordam,
+      o campo fica exatamente como está hoje. Resultado: 5 campos na Allianz, 1 na HDI.
+      *Decisão:* a extração roda igual e primeiro; isto é uma segunda passada que
+      apenas oferece o valor das outras colunas. E os campos continuam exigindo
+      confirmação depois da escolha, como já exigiam. **O pior caso desta
+      funcionalidade é o comportamento anterior**, e há teste que trava isso: a coluna
+      1 tem que ser idêntica ao valor que a extração já entregava.
+      *Limite conhecido:* só vale para campos cujo valor é moeda. Sim/Não,
+      "100% FIPE" e "400 KM" não são separáveis por coluna monetária e seguem como
+      antes.
+- [x] **Cabeçalho do assistente** mostra o logo grande de cada seguradora comparada,
+      e o seletor de plano quando houver.
+- [x] **Banner do comparativo** passou a usar o logo com o nome da seguradora. Antes
+      usava o símbolo isolado, que aparecia sem identificação.
+- [x] **Mural da capa** ganhou seletor individual das 23 marcas, recolhido, com
+      marcar/desmarcar todas. Lista vazia continua significando "todas".
+- [x] **Ícone de Configurações** tinha o caminho dos dentes corrompido. Refeito.
+- [x] **Marca d'água da capa** repete o desenho do logo da NEWA (duas hastes em
+      verdes diferentes e o X cruzando) e ganhou uma grade concêntrica verde saindo
+      do centro, mais fraca que a própria marca. O esmaecido é gradiente branco por
+      cima, não `mask`: o html2canvas que gera o PDF não aplica máscara, e a grade
+      sairia como um quadrado sólido.
+
 ## Próxima sessão — decidido com o Theo em 28/07
 
 ### 1. Instalar numa máquina que não seja a de desenvolvimento
@@ -181,7 +219,20 @@ Roteiro, de preferência num Windows 11 e num Windows 10 desatualizado:
 
 Só x64. Windows 32 bits não roda, e não está previsto.
 
-### 2. Multi-oferta: escolher a oferta, com pré-visualização
+### 2. Multi-oferta: a pré-visualização da área lida ainda não existe
+
+**Feito na v1.0:** a escolha do plano, com seletor no cabeçalho do assistente.
+**Não feito:** o recorte lado a lado mostrando a região que está sendo lida e a que
+está sendo descartada. A infraestrutura existe (`GET /api/crop`, e as ofertas já
+carregam a página e as faixas de x), mas não deu tempo de fazer com cuidado antes da
+reunião, e meia-implementação de pré-visualização é pior que nenhuma: dá confiança
+sem dar prova. Fica para a próxima sessão.
+
+Também segue aberto: os campos não-monetários (Sim/Não, "100% FIPE", "400 KM") não
+são separáveis por coluna e continuam pedindo confirmação manual, e a regra de
+separação só foi validada em dois documentos.
+
+<details><summary>Descrição original</summary>
 
 Hoje o app detecta que há várias ofertas (15/15 nos PDFs de amostra, sem falso
 positivo), lê a primeira coluna e joga os campos que dependem do plano para
@@ -192,6 +243,8 @@ e seus preços, **mostrando a área do documento que está sendo lida e a que es
 descartada**. A infraestrutura para isso já existe: cada campo carrega `page` + `bbox`
 na proveniência, e há `GET /api/crop` recortando região da página. Escolhida a oferta,
 a extração passa a ler aquela coluna e os campos saem de conferência.
+
+</details>
 
 ### 3. `valor_fipe` e `condutores_18_26` — o que exatamente falta
 

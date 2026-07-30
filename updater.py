@@ -39,7 +39,7 @@ baixado se sobrepõe a eles por nome de arquivo.
 import os, re, json, time, hashlib, secrets, tempfile
 import urllib.request, urllib.error
 
-VERSION = "0.4.0"
+VERSION = "1.0.0"
 
 NOME_OK = re.compile(r"^[a-z0-9_][a-z0-9_-]*\.json$")
 MAX_PERFIL = 512 * 1024       # um perfil real tem ~7 KB; 512 KB é folga larga
