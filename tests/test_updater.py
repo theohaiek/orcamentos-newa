@@ -128,14 +128,24 @@ ok(r["erro"] == "desligado", "URL vazia desliga a verificação")
 ok(len(EE.load_profiles(BASEDIR, LOCAL)) == 2, "os perfis em disco continuam carregando")
 
 print(">> 7. versão do app")
-ARQUIVOS["/versao.json"] = manifesto(app="0.5.0", instalador="https://exemplo/inst.exe")
+# As versões de teste saem da versão ATUAL, e não fixas no arquivo: com "0.5.0"
+# escrito à mão, o teste passou a reprovar sozinho no dia em que o app virou 1.0.0.
+# Um teste que quebra a cada release testa o número, não o comportamento.
+_p = [int(x) for x in updater.VERSION.split(".")]
+MAIOR = f"{_p[0] + 1}.0.0"
+MENOR = f"{_p[0]}.{_p[1]}.{_p[2]}-antiga" if _p == [0, 0, 0] else \
+        (f"{_p[0] - 1}.9.9" if _p[0] else f"{_p[0]}.{max(_p[1] - 1, 0)}.0")
+
+ARQUIVOS["/versao.json"] = manifesto(app=MAIOR, instalador="https://exemplo/inst.exe")
 r = updater.verificar(BASE, LOCAL, BASEDIR)
-ok(r["app_novo"] == "0.5.0" and r["instalador"] == "https://exemplo/inst.exe", "versão maior é anunciada")
+ok(r["app_novo"] == MAIOR and r["instalador"] == "https://exemplo/inst.exe",
+   f"versão maior é anunciada ({updater.VERSION} -> {MAIOR})")
 ARQUIVOS["/versao.json"] = manifesto(app=updater.VERSION)
 ok(updater.verificar(BASE, LOCAL, BASEDIR)["app_novo"] is None, "versão igual não é anunciada")
-ARQUIVOS["/versao.json"] = manifesto(app="0.1.0")
-ok(updater.verificar(BASE, LOCAL, BASEDIR)["app_novo"] is None, "versão menor nunca é oferecida")
-ARQUIVOS["/versao.json"] = manifesto(app="0.9.0", instalador="http://exemplo/inst.exe")
+ARQUIVOS["/versao.json"] = manifesto(app=MENOR)
+ok(updater.verificar(BASE, LOCAL, BASEDIR)["app_novo"] is None,
+   f"versão menor nunca é oferecida ({MENOR})")
+ARQUIVOS["/versao.json"] = manifesto(app=MAIOR, instalador="http://exemplo/inst.exe")
 ok(updater.verificar(BASE, LOCAL, BASEDIR)["instalador"] is None, "instalador fora de HTTPS é recusado")
 
 print(">> 8. defesas contra cache (CDN, proxy, antivírus que intercepta)")
