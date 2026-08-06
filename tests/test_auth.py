@@ -155,7 +155,7 @@ ok("madu" not in json.load(open(CACHE, encoding="utf-8")),
 print(">> 8. endereço sem https é recusado")
 r = auth.autenticar("http://exemplo.com/webhook", "madu", "x", CACHE, "0.4.0")
 ok(not r["ok"] and r["origem"] == "config", "http externo não serve — a senha vai no corpo")
-ok(auth._url_aceitavel("https://editor.clinicaleger.com.br/webhook/abc"), "https serve")
+ok(auth._url_aceitavel("https://editor.exemplo.com.br/webhook/abc"), "https serve")
 
 print(">> 9. papel desconhecido não vira admin")
 responde({"ok": True, "papel": "gerente", "expira_em": prazo(1)})
